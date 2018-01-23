@@ -1,0 +1,7 @@
+dataset/source.gz
+training/bin
+training/generate_wav.sh
+training/pronunctiation.txt
+training/transcription
+training/wav
+*.swp

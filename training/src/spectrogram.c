@@ -33,6 +33,20 @@ double *generate_spectrogram (double data[], unsigned length, unsigned window) {
 	return output;
 }
 
+double *reduce_spectrogram (double data[], unsigned length, unsigned window) {
+	double *output = malloc (sizeof(double) * length/4);
+	int total_rows = length / (window * 2);
+	int total_cols = window/2;
+	int row, col, pos;
+	for (row = 0; row < total_rows; row++) {
+		for (col = 0; col < total_cols; col++) {
+			pos = row * total_cols + col;
+			output [pos] = data [window * 2*row + 2*col];
+		}
+	}
+	return output;
+}
+
 void smooth_spectrogram (double *input, unsigned long data_length) {
 	int i;
 	for (i=0; i < data_length; i++) {

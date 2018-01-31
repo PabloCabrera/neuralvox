@@ -3,5 +3,7 @@ training/bin
 training/generate_wav.sh
 training/pronunctiation.txt
 training/transcription
+training/training_*.txt
+training/raw
 training/wav
 *.swp

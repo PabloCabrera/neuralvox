@@ -10,7 +10,7 @@
 
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
-#define BUFFER_SIZE 16384
+#define BUFFER_SIZE 12288
 #define PHONEME_SYMBOLS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz*^"
 #define THRESHOLD 0.9
 #define SPECTROGRAM_WINDOW_SIZE 128
@@ -28,6 +28,7 @@ struct training_item {
 /* GLOBAL VARIABLES */
 double global_training_buffer [BUFFER_SIZE];
 struct training_item global_training_set [TRAINING_SET_SIZE];
+unsigned global_training_item_count = 0;
 
 /* FUNCTION PROTOTYPES */
 char *get_phoneme (char *pronunctiation);
@@ -39,24 +40,24 @@ void dump_to_training_buffer (double *data, int length);
 void clean_buffer ();
 double *get_result_vector (char *phoneme);
 char *result_vector_to_string (double *vector);
-void train_network (struct fann *network, struct training_item *item);
+void train_network (struct fann *network);
+void train_network_iteration (struct fann *network, struct training_item *item);
 void test_network (struct fann *network);
-void show_results (struct fann *network, char *word);
+void show_results (struct fann *network, struct training_item item);
 
 
 int main (int arg_count, char *args[]) {
-	struct fann *network = fann_create_standard (4, BUFFER_SIZE, 256, 128, strlen (PHONEME_SYMBOLS));
-	fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
-	fann_set_learning_momentum (network, 0.8);
+	struct fann *network = fann_create_standard (3, BUFFER_SIZE, 128, strlen (PHONEME_SYMBOLS));
+	fann_set_learning_rate (network, 10000);
+	fann_set_learning_momentum (network, 10000);
 	FILE *list = fopen (TRAINING_PRONUNCTATION_FILE, "r");
 	fprintf (stderr, "Cargando datos...\n");
 	load_training_data (list);
 	fclose (list);
-	/*
 	fprintf (stderr, "Entrenando...\n");
-	train_network ();
-	test_network (network);
-	*/
+	train_network (network);
+	//fprintf (stderr, "Probando...\n");
+	//test_network (network);
 	fann_destroy (network);
 }
 
@@ -83,6 +84,7 @@ unsigned load_training_data (FILE *list) {
 		num_word++;
 		free (line);
 	}
+	global_training_item_count = num_word;
 	return num_word;
 }
 
@@ -126,12 +128,31 @@ void bubble_sort (char *word) {
 	}
 }
 
-void train_network (struct fann *network, struct training_item *item) {
+void train_network (struct fann *network) {
+	printf ("\nEstado inicial:\n");
+	test_network (network);
+	unsigned num_word;
+	struct training_item *item;
+	unsigned num_iteration = 0;
+	while (num_iteration < 50000) {
+		for (num_word = 0; num_word < global_training_item_count; num_word++) {
+			item = &(global_training_set [num_word]);
+			train_network_iteration (network, item);
+		}
+		num_iteration++;
+		printf ("\nIteración %d:\n", num_iteration);
+		test_network (network);
+	}
+	
+	
+}
+
+void train_network_iteration (struct fann *network, struct training_item *item) {
 	dump_to_training_buffer (item-> data, item-> data_length);
 	fann_train  (network, global_training_buffer, item-> expected_result);
 }
 
-long load_word_data (char *word, double **buffer, long *size) {
+long load_word_data (char *word, double **buffer) {
 	char *raw_filename = malloc (sizeof (char) * (11) + strlen (TRAINING_RAW_DIR) + strlen (word));
 	strcpy (raw_filename, TRAINING_RAW_DIR);
 	strcat (raw_filename, "/");
@@ -143,7 +164,7 @@ long load_word_data (char *word, double **buffer, long *size) {
 	return total_readed;
 }
 
-long load_raw_file_data (char *filename, double **buffer, long *size) {
+long load_raw_file_data (char *filename, double **buffer) {
 	double *tmp_data = malloc (sizeof (double) * BUFFER_SIZE);
 	FILE *file = fopen (filename, "r");
 	unsigned stop = 0;
@@ -211,25 +232,17 @@ char *result_vector_to_string (double *vector) {
 }
 
 void test_network (struct fann *network) {
-	/*
-	show_results (network, "probar");
-	show_results (network, "embajada");
-	show_results (network, "labio");
-	show_results (network, "juramentar");
-	show_results (network, "trapecista");
-	show_results (network, "idealidad");
-	show_results (network, "neutral");
-	show_results (network, "unicornio");
-	show_results (network, "cintura");
-	*/
+	show_results (network, global_training_set [100]);
+	show_results (network, global_training_set [800]);
+	show_results (network, global_training_set [1500]);
+	show_results (network, global_training_set [2100]);
+	show_results (network, global_training_set [3400]);
 }
 
-void show_results (struct fann *network, char *word) {
-	/*
-	load_word_spectrogram (word);
+void show_results (struct fann *network, struct training_item item) {
+	dump_to_training_buffer (item.data, item.data_length);
 	double *result = fann_run (network, global_training_buffer);
 	char *result_string = result_vector_to_string (result);
-	printf ("%s: %s\n", word, result_string);
+	printf ("%s: %s\n", item.word, result_string);
 	free (result_string);
-	*/
 }

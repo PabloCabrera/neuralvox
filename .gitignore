@@ -4,6 +4,9 @@ training/generate_wav.sh
 training/pronunctiation.txt
 training/transcription
 training/training_*.txt
+training/wav_list.txt
 training/raw
+training/png
 training/wav
+training/network.fann
 *.swp

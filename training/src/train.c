@@ -1,32 +1,31 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
-#include <string.h>
-#include <fftw3.h>
-#include <sndfile.h>
-#include <doublefann.h>
-#include "load_wav.h"
-#include "spectrogram.h"
+#include <fann.h>
 
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
-#define BUFFER_SIZE 12288
-#define PHONEME_SYMBOLS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz*^"
-#define THRESHOLD 0.9
-#define SPECTROGRAM_WINDOW_SIZE 128
-#define TRAINING_SET_SIZE 7000
+#define BUFFER_SIZE 14000
+#define NEURONS_INPUT_LAYER 16
+#define NEURONS_HIDDEN_LAYER 64
+#define PHONEME "^;*abBdeEfgiIjJklmnoOprRstTuUwx"
+#define THRESHOLD 0.5
+#define TRAINING_SET_SIZE 3030
+#define SPECTROGRAM_OFFSET_START 256
+#define SPECTROGRAM_OFFSET_END 6528
+#define SPECTROGRAM_WINDOW 128
 
 /* DATA TYPES */
 struct training_item {
 	char *word;
 	char *phoneme;
-	double *data;
+	fann_type *data_flatted;
 	long data_length;
-	double *expected_result;
+	fann_type *expected_result;
 };
 
 /* GLOBAL VARIABLES */
-double global_training_buffer [BUFFER_SIZE];
 struct training_item global_training_set [TRAINING_SET_SIZE];
 unsigned global_training_item_count = 0;
 
@@ -36,28 +35,43 @@ void bubble_sort (char *word);
 unsigned load_training_data (FILE *list);
 long load_word_data (char *word, double **buffer);
 long load_raw_file_data (char *filename, double **buffer);
-void dump_to_training_buffer (double *data, int length);
+fann_type *flat_data (double *data, long data_length);
+void training_data_callback (unsigned num, unsigned num_input, unsigned num_output, fann_type *input , fann_type *output);
 void clean_buffer ();
-double *get_result_vector (char *phoneme);
-char *result_vector_to_string (double *vector);
-void train_network (struct fann *network);
+fann_type *get_result_vector (char *phoneme);
+char *result_vector_to_string (fann_type *vector);
+char *flat_data_to_string (fann_type *flatted_data, unsigned length);
+void train_network (struct fann *network, struct fann_train_data *training_data);
 void train_network_iteration (struct fann *network, struct training_item *item);
 void test_network (struct fann *network);
 void show_results (struct fann *network, struct training_item item);
 
 
 int main (int arg_count, char *args[]) {
-	struct fann *network = fann_create_standard (3, BUFFER_SIZE, 128, strlen (PHONEME_SYMBOLS));
-	fann_set_learning_rate (network, 10000);
-	fann_set_learning_momentum (network, 10000);
+	struct fann *network;
+	//network = fann_create_from_file ("network.fann");
+	//if (network == NULL) {
+		fprintf (stderr, "Creando red...\n");
+		network = fann_create_standard (3, NEURONS_INPUT_LAYER, NEURONS_HIDDEN_LAYER, strlen (PHONEME));
+		//fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
+		//fann_randomize_weights (network, -10.0, 10.0);
+		//fann_set_learning_rate (network, 0.9);
+		//fann_set_learning_momentum (network, 0.9);
+		//fann_set_activation_function_hidden (network, FANN_ELLIOT);
+		//fann_set_activation_function_output (network, FANN_ELLIOT_SYMMETRIC);
+		//fann_set_activation_steepness_hidden (network, 1.0);
+		//fann_set_activation_steepness_output (network, 1.0);
+	//} else {
+		//fprintf (stderr, "Red cargada desde archivo network.fann\n");
+	//}
 	FILE *list = fopen (TRAINING_PRONUNCTATION_FILE, "r");
 	fprintf (stderr, "Cargando datos...\n");
 	load_training_data (list);
 	fclose (list);
-	fprintf (stderr, "Entrenando...\n");
-	train_network (network);
-	//fprintf (stderr, "Probando...\n");
-	//test_network (network);
+	struct fann_train_data *train_data = fann_create_train_from_callback (global_training_item_count, NEURONS_INPUT_LAYER, strlen (PHONEME), training_data_callback);
+	fann_shuffle_train_data (train_data);
+	fprintf (stderr, "Entrenando... (%d ejemplos)\n", global_training_item_count);
+	train_network (network, train_data);
 	fann_destroy (network);
 }
 
@@ -67,6 +81,7 @@ unsigned load_training_data (FILE *list) {
 	size_t line_length;
 	struct training_item info;
 	unsigned num_word = 0;
+	double *tmp_data;
 
 	while (getline (&line, &line_length, list) > 0 && num_word < TRAINING_SET_SIZE) {
 		word = line;
@@ -75,20 +90,23 @@ unsigned load_training_data (FILE *list) {
 		char *pronunctiation = delimiter + 2;
 		info.phoneme = get_phoneme (pronunctiation);
 		info.expected_result = get_result_vector (info.phoneme);
-		info.data_length = load_word_data (word, &(info.data));
+		info.data_length = load_word_data (word, &tmp_data);
 		info.word = strdup (word);
+		info.data_flatted = flat_data (tmp_data, info.data_length);
 		
 		global_training_set [num_word] = info;
 
+		free (tmp_data);
+		free (line);
 		line = NULL;
 		num_word++;
-		free (line);
 	}
 	global_training_item_count = num_word;
 	return num_word;
 }
 
 char *get_phoneme (char *pronunctiation) {
+	//printf ("get_phoneme (%s)\n", pronunctiation);
 	int length = strlen (pronunctiation);
 	char *phoneme = malloc (sizeof (char) * (1 + strlen (pronunctiation)));
 	int pos;
@@ -128,36 +146,41 @@ void bubble_sort (char *word) {
 	}
 }
 
-void train_network (struct fann *network) {
-	printf ("\nEstado inicial:\n");
+void training_data_callback (unsigned num, unsigned num_input, unsigned num_output, fann_type *input , fann_type *output) {
+	//memcpy (input, global_training_set [num].data, num_input);
+	memcpy (input, global_training_set [num].data_flatted, sizeof (fann_type) * num_input);
+	memcpy (output, global_training_set [num].expected_result, sizeof (fann_type) * num_output);
+}
+
+void train_network (struct fann *network, struct fann_train_data *train_data) {
+	fprintf (stderr, "\nEstado inicial:\n");
 	test_network (network);
 	unsigned num_word;
 	struct training_item *item;
 	unsigned num_iteration = 0;
-	while (num_iteration < 50000) {
-		for (num_word = 0; num_word < global_training_item_count; num_word++) {
-			item = &(global_training_set [num_word]);
-			train_network_iteration (network, item);
-		}
+	while (num_iteration < 500000) {
+		fann_train_epoch (network, train_data);
 		num_iteration++;
-		printf ("\nIteración %d:\n", num_iteration);
-		test_network (network);
+		if (num_iteration % 500 == 0) {
+			printf ("\nIteración %d:\n", num_iteration);
+			fann_save (network, "network.fann");
+			test_network (network);
+		}
 	}
-	
+	fann_destroy_train (train_data);
 	
 }
 
 void train_network_iteration (struct fann *network, struct training_item *item) {
-	dump_to_training_buffer (item-> data, item-> data_length);
-	fann_train  (network, global_training_buffer, item-> expected_result);
+	fann_train  (network, item-> data_flatted, item-> expected_result);
 }
 
 long load_word_data (char *word, double **buffer) {
-	char *raw_filename = malloc (sizeof (char) * (11) + strlen (TRAINING_RAW_DIR) + strlen (word));
+	char *raw_filename = malloc (strlen("/.raw$") + strlen (TRAINING_RAW_DIR) + strlen (word));
 	strcpy (raw_filename, TRAINING_RAW_DIR);
 	strcat (raw_filename, "/");
 	strcat (raw_filename, word);
-	strcat (raw_filename, ".half.raw");
+	strcat (raw_filename, ".raw");
 	long total_readed = load_raw_file_data (raw_filename, buffer);
 
 	free (raw_filename);
@@ -165,7 +188,6 @@ long load_word_data (char *word, double **buffer) {
 }
 
 long load_raw_file_data (char *filename, double **buffer) {
-	double *tmp_data = malloc (sizeof (double) * BUFFER_SIZE);
 	FILE *file = fopen (filename, "r");
 	unsigned stop = 0;
 	long total_readed = 0;
@@ -175,39 +197,62 @@ long load_raw_file_data (char *filename, double **buffer) {
 		return -1;
 	}
 
+	double *tmp_data = malloc (sizeof (double) * BUFFER_SIZE);
+	memset (tmp_data, '\0', BUFFER_SIZE * sizeof (double));
+
+	/* Skip offset pixels */
+	fseek (file, SPECTROGRAM_OFFSET_START * sizeof (double), SEEK_SET);
+
 	while (!stop) {
 
-		long readed = fread (tmp_data + total_readed, sizeof (double), 64, file);
+		long readed = fread (tmp_data + total_readed, sizeof (double), SPECTROGRAM_WINDOW, file);
 		total_readed += readed;
 
 		if (feof (file)) {
 			stop = 1;
-		} else if (total_readed + 64 > BUFFER_SIZE) {
+		} else if (total_readed + SPECTROGRAM_WINDOW > BUFFER_SIZE) {
 			stop = 1;
-			fprintf (stderr, "Warning: Archivo demasiado grande: %s.\n", filename);
+			//fprintf (stderr, "Warning: Archivo demasiado grande: %s.\n", filename);
 		}
 	}
 	
 	fclose (file);
 	*buffer = tmp_data;
-	return total_readed;
+	printf ("%s: leidos %ld doubles\n", filename, total_readed - (SPECTROGRAM_OFFSET_END));
+	return (total_readed) - (SPECTROGRAM_OFFSET_END);
 }
 
-void dump_to_training_buffer (double *data, int length) {
-	clean_buffer ();
-	memcpy (global_training_buffer, data, sizeof (double) * length);
+fann_type *flat_data (double *data, long data_length) {
+	fann_type *flatted_data = malloc (NEURONS_INPUT_LAYER * sizeof (fann_type));
+	fann_type sums [NEURONS_INPUT_LAYER] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};
+	long i;
+	unsigned freq;
+
+	if (data_length == 0) {
+		fprintf (stderr, "ERROR: data_length es cero\n");
+		return flatted_data;
+	}
+
+	for (i=0; i < data_length; i++) {
+		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/NEURONS_INPUT_LAYER);
+		sums [freq] += (data [i]);
+
+	}
+
+	for (freq=0; freq < NEURONS_INPUT_LAYER; freq++) {
+		flatted_data [freq] = (sums [freq] / (data_length/SPECTROGRAM_WINDOW));
+	}
+
+	return flatted_data;
 }
 
-void clean_buffer () {
-	memset (global_training_buffer, '\0', BUFFER_SIZE * sizeof (double));
-}
 
-double *get_result_vector (char *phoneme) {
-	double *vector = malloc (strlen (PHONEME_SYMBOLS) * sizeof (double));
+fann_type *get_result_vector (char *phoneme) {
+	fann_type *vector = malloc (strlen (PHONEME) * sizeof (fann_type));
 	int pos;
-	int num_phoneme = strlen (PHONEME_SYMBOLS);
-	for (pos = 0; pos < strlen (PHONEME_SYMBOLS); pos++) {
-		if (index (phoneme, PHONEME_SYMBOLS [pos]) != NULL) {
+	int num_phoneme = strlen (PHONEME);
+	for (pos = 0; pos < strlen (PHONEME); pos++) {
+		if (index (phoneme, PHONEME [pos]) != NULL) {
 			vector [pos] = 1.0;
 		} else {
 			vector [pos] = 0.0;
@@ -216,14 +261,14 @@ double *get_result_vector (char *phoneme) {
 	return vector;
 }
 
-char *result_vector_to_string (double *vector) {
-	int num_phoneme_symbols = strlen (PHONEME_SYMBOLS);
-	char *phoneme = malloc (num_phoneme_symbols);
+char *result_vector_to_string (fann_type *vector) {
+	int num_phoneme_symbols = strlen (PHONEME);
+	char *phoneme = malloc (sizeof (char) * (num_phoneme_symbols +1));
 	int out_pos = 0;
 	int pos;
 	for (pos=0; pos < num_phoneme_symbols; pos++) {
 		if (vector [pos] > THRESHOLD) {
-			phoneme [out_pos] = PHONEME_SYMBOLS[pos];	
+			phoneme [out_pos] = PHONEME[pos];	
 			out_pos++;
 		}
 	}
@@ -231,18 +276,40 @@ char *result_vector_to_string (double *vector) {
 	return phoneme;
 }
 
+char *flat_data_to_string (fann_type *flatted_data, unsigned length) {
+	char *ret = malloc ((length + 1) * sizeof (char));
+	int i;
+	for (i=0; i < length; i++) {
+		int digit = (10 * flatted_data[i]);
+		if (digit < 0) {
+			digit = 0;
+		} else if (digit > 9) {
+			digit = 9;
+		}
+		char car = '0' + digit;
+		ret [i] = car;
+	}
+
+	ret [length] = '\0';
+	return ret;
+}
+
 void test_network (struct fann *network) {
-	show_results (network, global_training_set [100]);
-	show_results (network, global_training_set [800]);
-	show_results (network, global_training_set [1500]);
-	show_results (network, global_training_set [2100]);
-	show_results (network, global_training_set [3400]);
+	unsigned long primes [7] = {541, 7919, 104729, 1299709, 15485863, 2038074743};
+	int i;
+	for (i = 0; i < 7; i++) {
+		show_results (network, global_training_set [primes [i] % global_training_item_count]);
+	}
 }
 
 void show_results (struct fann *network, struct training_item item) {
-	dump_to_training_buffer (item.data, item.data_length);
-	double *result = fann_run (network, global_training_buffer);
+	fann_type *result = fann_run (network, item.data_flatted);
 	char *result_string = result_vector_to_string (result);
-	printf ("%s: %s\n", item.word, result_string);
+	char *input_string = flat_data_to_string (item.data_flatted, NEURONS_INPUT_LAYER);
+	char *expected_string = result_vector_to_string (item.expected_result);
+	char *success_string = (strcmp (result_string, expected_string) == 0)? "OK!": "";
+	printf ("%s:\t [%s]  =>  (%s | %s)\t%s\n", item.word, input_string, result_string, expected_string, success_string);
+	free (expected_string);
+	free (input_string);
 	free (result_string);
 }

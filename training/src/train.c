@@ -15,6 +15,8 @@
 #define SPECTROGRAM_OFFSET_START 256
 #define SPECTROGRAM_OFFSET_END 6528
 #define SPECTROGRAM_WINDOW 128
+#define MEAN_WEIGHT 5
+#define STDEV_WEIGHT 0.1
 
 /* DATA TYPES */
 struct training_item {
@@ -36,6 +38,8 @@ unsigned load_training_data (FILE *list);
 long load_word_data (char *word, double **buffer);
 long load_raw_file_data (char *filename, double **buffer);
 fann_type *flat_data (double *data, long data_length);
+fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs);
+fann_type *get_stdev_histogram (double *data, long data_length, fann_type *means, unsigned num_freqs);
 void training_data_callback (unsigned num, unsigned num_input, unsigned num_output, fann_type *input , fann_type *output);
 void clean_buffer ();
 fann_type *get_result_vector (char *phoneme);
@@ -49,21 +53,16 @@ void show_results (struct fann *network, struct training_item item);
 
 int main (int arg_count, char *args[]) {
 	struct fann *network;
-	//network = fann_create_from_file ("network.fann");
-	//if (network == NULL) {
+	network = fann_create_from_file ("network.fann");
+	if (network == NULL) {
 		fprintf (stderr, "Creando red...\n");
 		network = fann_create_standard (3, NEURONS_INPUT_LAYER, NEURONS_HIDDEN_LAYER, strlen (PHONEME));
-		//fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
-		//fann_randomize_weights (network, -10.0, 10.0);
-		//fann_set_learning_rate (network, 0.9);
-		//fann_set_learning_momentum (network, 0.9);
-		//fann_set_activation_function_hidden (network, FANN_ELLIOT);
-		//fann_set_activation_function_output (network, FANN_ELLIOT_SYMMETRIC);
-		//fann_set_activation_steepness_hidden (network, 1.0);
-		//fann_set_activation_steepness_output (network, 1.0);
-	//} else {
-		//fprintf (stderr, "Red cargada desde archivo network.fann\n");
-	//}
+		fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
+		fann_set_activation_function_hidden (network, FANN_ELLIOT_SYMMETRIC);
+		fann_set_activation_function_output (network, FANN_ELLIOT);
+	} else {
+		fprintf (stderr, "Red cargada desde archivo network.fann\n");
+	}
 	FILE *list = fopen (TRAINING_PRONUNCTATION_FILE, "r");
 	fprintf (stderr, "Cargando datos...\n");
 	load_training_data (list);
@@ -218,32 +217,70 @@ long load_raw_file_data (char *filename, double **buffer) {
 	
 	fclose (file);
 	*buffer = tmp_data;
-	printf ("%s: leidos %ld doubles\n", filename, total_readed - (SPECTROGRAM_OFFSET_END));
 	return (total_readed) - (SPECTROGRAM_OFFSET_END);
 }
 
 fann_type *flat_data (double *data, long data_length) {
+	unsigned num_freqs = NEURONS_INPUT_LAYER/2;
 	fann_type *flatted_data = malloc (NEURONS_INPUT_LAYER * sizeof (fann_type));
-	fann_type sums [NEURONS_INPUT_LAYER] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};
+	fann_type *means = get_means_histogram (data, data_length, num_freqs);
+	fann_type *stdevs = get_stdev_histogram (data, data_length, means, num_freqs);
+
+	memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
+	memcpy (flatted_data + num_freqs, stdevs, num_freqs * sizeof (fann_type));
+
+	free (means);
+	free (stdevs);
+	return flatted_data;
+}
+
+fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs) {
 	long i;
 	unsigned freq;
+	fann_type *means = malloc (num_freqs * sizeof (fann_type));
+
+	for (freq=0; freq < num_freqs; freq++) {
+		means [freq] = 0;
+	}
 
 	if (data_length == 0) {
 		fprintf (stderr, "ERROR: data_length es cero\n");
-		return flatted_data;
+		return means;
 	}
 
 	for (i=0; i < data_length; i++) {
-		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/NEURONS_INPUT_LAYER);
-		sums [freq] += (data [i]);
+		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/num_freqs);
+		means [freq] += (data [i]) / (SPECTROGRAM_WINDOW/num_freqs);
 
 	}
 
-	for (freq=0; freq < NEURONS_INPUT_LAYER; freq++) {
-		flatted_data [freq] = (sums [freq] / (data_length/SPECTROGRAM_WINDOW));
+	for (freq=0; freq < num_freqs; freq++) {
+		means [freq] = MEAN_WEIGHT * (means [freq] / (data_length/SPECTROGRAM_WINDOW));
 	}
 
-	return flatted_data;
+	return means;
+}
+
+fann_type *get_stdev_histogram (double *data, long data_length, fann_type *means, unsigned num_freqs) {
+
+	long i;
+	unsigned freq;
+	fann_type *stdevs = malloc (num_freqs * sizeof (fann_type));
+
+	for (freq=0; freq < num_freqs; freq++) {
+		stdevs [freq] = 0;
+	}
+
+	for (i=0; i < data_length; i++) {
+		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/num_freqs);
+		stdevs [freq] += fabsf (data [i] - means [freq]);
+	}
+
+	for (freq=0; freq < num_freqs; freq++) {
+		stdevs [freq] = STDEV_WEIGHT * (stdevs [freq] / (data_length/SPECTROGRAM_WINDOW));
+	}
+
+	return stdevs;
 }
 
 

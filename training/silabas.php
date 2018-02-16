@@ -84,7 +84,7 @@ foreach ($syllables as $syllable) {
 		if ($count++ % 1000 == 0) {
 			fclose ($wavlist_file);
 			fclose ($pronunctiation_file);
-			exec ("/home/pablo/dev/spectvox/bin/spectvox -pr wav_list.txt");
+			exec ("spectvox -pr wav_list.txt");
 			$pronunctiation_file = fopen ("pronunctiation.txt", "a");
 			$wavlist_file = fopen ("wav_list.txt", "w");
 			foreach (glob ("wav/*.png") as $filename) {

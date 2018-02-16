@@ -1,3 +1,4 @@
+*.swp
 dataset/source.gz
 training/bin
 training/generate_wav.sh
@@ -9,4 +10,15 @@ training/raw
 training/png
 training/wav
 training/network.fann
-*.swp
+training/network_*
+testing/network.fann
+testing/bin
+testing/png
+testing/wav
+testing/raw
+testing/data.js
+testing/network_*
+testing/output.txt
+testing/wav_list.txt
+
+

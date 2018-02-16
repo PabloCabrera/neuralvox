@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<head>
+	<meta charset="utf-8" />
+	<title>Reconocimiento de fonemas</title>
+	<script src="data.js"></script>
+	<script src="src/script.js"></script>
+	<link rel="stylesheet" href="src/view.css">
+</head>
+<body>
+	<select class="spectrogram_select" onchange="onSpectrogramSelectChanged()">
+	</select>
+	<div class="image_container">
+		<ul class="slices_container">
+		</ul>
+	</div>
+	<div class="audio_container">
+		<audio controls onplay="onAudioPlay()">
+		</audio>
+	</div>
+</body>

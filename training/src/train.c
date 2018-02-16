@@ -8,16 +8,16 @@
 #define TRAINING_RAW_DIR "raw"
 #define BUFFER_SIZE 14000
 #define NEURONS_INPUT_LAYER 16
-#define NEURONS_HIDDEN_LAYER 1024
+#define NEURONS_HIDDEN_LAYER 64
 #define PHONEME "abdefgijJklmnopRr*stuwx"
-#define THRESHOLD 0.95
+#define THRESHOLD 0.9
 #define TRAINING_SET_SIZE 667
 #define SPECTROGRAM_OFFSET_START 256
 #define SPECTROGRAM_OFFSET_END 6528
 #define SPECTROGRAM_WINDOW 128
 #define MEAN_WEIGHT 5
 #define STDEV_WEIGHT 0.1
-#define ACCURACY_STOP_TRAINING 0.8
+#define ACCURACY_STOP_TRAINING 0.9
 #define NUM_PHONEME_SYNONYMS 8
 
 char PHONEME_SYNONYMS[][2] = {
@@ -72,7 +72,7 @@ int main (int arg_count, char *args[]) {
 	network = fann_create_from_file ("network.fann");
 	if (network == NULL) {
 		fprintf (stderr, "Creando red...\n");
-		network = fann_create_standard (
+		network = fann_create_shortcut (
 			3,
 			NEURONS_INPUT_LAYER,
 			NEURONS_HIDDEN_LAYER,

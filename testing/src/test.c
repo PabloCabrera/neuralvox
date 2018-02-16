@@ -4,15 +4,15 @@
 
 #define BUFFER_SIZE 8388608 //64 MiB
 #define SPECTROGRAM_OFFSET_START 0
-#define SPECTROGRAM_OFFSET_END 6144
+#define SPECTROGRAM_OFFSET_END 4480
 #define SPECTROGRAM_WINDOW 128
-#define SLICE_WIDTH 32
-#define SLICE_STEP 24
+#define NEURONS_INPUT_LAYER 12
+#define SLICE_WIDTH 18
+#define SLICE_STEP 14
 #define MEAN_WEIGHT 5
-#define STDEV_WEIGHT 0.1
-#define NEURONS_INPUT_LAYER 16
+#define SHARP_WEIGHT 1
 #define PHONEME "abdefgijJklmnopRr*stuwx"
-#define THRESHOLD 0.96
+#define THRESHOLD 0.97
 #define NUM_EXAMPLES 8
 
 /* DATA TYPES */
@@ -38,7 +38,7 @@ long load_raw_file_data (char *filename, double **data_buffer);
 fann_type **get_slices (double *data, unsigned num_slices, unsigned slice_width, unsigned position_step);
 fann_type *flat_data (double *data, long data_length);
 fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs);
-fann_type *get_stdev_histogram (double *data, long data_length, fann_type *means, unsigned num_freqs);
+fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_freqs);
 char *result_vector_to_string (fann_type *vector);
 void generate_js_info (char *raw_filename, long data_length, unsigned num_slices, char **results, FILE *jsfile);
 char *get_png_filename (char *raw_filename);
@@ -131,18 +131,19 @@ fann_type **get_slices (double *data, unsigned num_slices, unsigned slice_width,
 }
 
 fann_type *flat_data (double *data, long data_length) {
-	unsigned num_freqs = NEURONS_INPUT_LAYER/2;
+	unsigned num_freqs = NEURONS_INPUT_LAYER;
 	fann_type *flatted_data = malloc (NEURONS_INPUT_LAYER * sizeof (fann_type));
-	fann_type *means = get_means_histogram (data, data_length, num_freqs);
-	fann_type *stdevs = get_stdev_histogram (data, data_length, means, num_freqs);
+	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
+	fann_type *sharp = get_sharp_histogram (data, data_length, num_freqs);
 
-	memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
-	memcpy (flatted_data + num_freqs, stdevs, num_freqs * sizeof (fann_type));
+	//memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
+	memcpy (flatted_data, sharp, num_freqs * sizeof (fann_type));
 
-	free (means);
-	free (stdevs);
+	//free (means);
+	free (sharp);
 	return flatted_data;
 }
+
 
 fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs) {
 	long i;
@@ -171,26 +172,28 @@ fann_type *get_means_histogram (double *data, long data_length, unsigned num_fre
 	return means;
 }
 
-fann_type *get_stdev_histogram (double *data, long data_length, fann_type *means, unsigned num_freqs) {
+fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_freqs) {
 
 	long i;
 	unsigned freq;
-	fann_type *stdevs = malloc (num_freqs * sizeof (fann_type));
+	fann_type *sharp = malloc (num_freqs * sizeof (fann_type));
 
 	for (freq=0; freq < num_freqs; freq++) {
-		stdevs [freq] = 0;
+		sharp [freq] = 0;
 	}
 
+	double prev_pixel = 0.5;
 	for (i=0; i < data_length; i++) {
 		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/num_freqs);
-		stdevs [freq] += fabsf (data [i] - means [freq]);
+		sharp [freq] += fabsf (prev_pixel - data [i]);
+		prev_pixel = data [i];
 	}
 
 	for (freq=0; freq < num_freqs; freq++) {
-		stdevs [freq] = STDEV_WEIGHT * (stdevs [freq] / (data_length/SPECTROGRAM_WINDOW));
+		sharp [freq] = SHARP_WEIGHT * (sharp [freq] / (data_length/SPECTROGRAM_WINDOW));
 	}
 
-	return stdevs;
+	return sharp;
 }
 
 char *result_vector_to_string (fann_type *vector) {

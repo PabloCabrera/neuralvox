@@ -7,16 +7,16 @@
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
 #define BUFFER_SIZE 14000
-#define NEURONS_INPUT_LAYER 16
+#define NEURONS_INPUT_LAYER 12
 #define NEURONS_HIDDEN_LAYER 64
 #define PHONEME "abdefgijJklmnopRr*stuwx"
 #define THRESHOLD 0.9
 #define TRAINING_SET_SIZE 667
 #define SPECTROGRAM_OFFSET_START 256
-#define SPECTROGRAM_OFFSET_END 6528
+#define SPECTROGRAM_OFFSET_END 4096
 #define SPECTROGRAM_WINDOW 128
 #define MEAN_WEIGHT 5
-#define STDEV_WEIGHT 0.1
+#define SHARP_WEIGHT 1
 #define ACCURACY_STOP_TRAINING 0.9
 #define NUM_PHONEME_SYNONYMS 8
 
@@ -54,7 +54,7 @@ void replace_phoneme_synonyms (char *phoneme);
 long load_raw_file_data (char *filename, double **buffer);
 fann_type *flat_data (double *data, long data_length);
 fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs);
-fann_type *get_stdev_histogram (double *data, long data_length, fann_type *means, unsigned num_freqs);
+fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_freqs);
 void training_data_callback (unsigned num, unsigned num_input, unsigned num_output, fann_type *input , fann_type *output);
 void clean_buffer ();
 fann_type *get_result_vector (char *phoneme);
@@ -257,16 +257,16 @@ long load_raw_file_data (char *filename, double **buffer) {
 }
 
 fann_type *flat_data (double *data, long data_length) {
-	unsigned num_freqs = NEURONS_INPUT_LAYER/2;
+	unsigned num_freqs = NEURONS_INPUT_LAYER;
 	fann_type *flatted_data = malloc (NEURONS_INPUT_LAYER * sizeof (fann_type));
-	fann_type *means = get_means_histogram (data, data_length, num_freqs);
-	fann_type *stdevs = get_stdev_histogram (data, data_length, means, num_freqs);
+	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
+	fann_type *sharp = get_sharp_histogram (data, data_length, num_freqs);
 
-	memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
-	memcpy (flatted_data + num_freqs, stdevs, num_freqs * sizeof (fann_type));
+	//memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
+	memcpy (flatted_data, sharp, num_freqs * sizeof (fann_type));
 
-	free (means);
-	free (stdevs);
+	//free (means);
+	free (sharp);
 	return flatted_data;
 }
 
@@ -297,26 +297,28 @@ fann_type *get_means_histogram (double *data, long data_length, unsigned num_fre
 	return means;
 }
 
-fann_type *get_stdev_histogram (double *data, long data_length, fann_type *means, unsigned num_freqs) {
+fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_freqs) {
 
 	long i;
 	unsigned freq;
-	fann_type *stdevs = malloc (num_freqs * sizeof (fann_type));
+	fann_type *sharp = malloc (num_freqs * sizeof (fann_type));
 
 	for (freq=0; freq < num_freqs; freq++) {
-		stdevs [freq] = 0;
+		sharp [freq] = 0;
 	}
 
+	double prev_pixel = 0.5;
 	for (i=0; i < data_length; i++) {
 		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/num_freqs);
-		stdevs [freq] += fabsf (data [i] - means [freq]);
+		sharp [freq] += fabsf (prev_pixel - data [i]);
+		prev_pixel = data [i];
 	}
 
 	for (freq=0; freq < num_freqs; freq++) {
-		stdevs [freq] = STDEV_WEIGHT * (stdevs [freq] / (data_length/SPECTROGRAM_WINDOW));
+		sharp [freq] = SHARP_WEIGHT * (sharp [freq] / (data_length/SPECTROGRAM_WINDOW));
 	}
 
-	return stdevs;
+	return sharp;
 }
 
 
@@ -368,7 +370,7 @@ char *flat_data_to_string (fann_type *flatted_data, unsigned length) {
 }
 
 float test_network (struct fann *network) {
-	//unsigned long primes [7] = {541, 7919, 104729, 1299709, 15485863, 2038074743};
+	unsigned long primes [7] = {541, 7919, 104729, 1299709, 15485863, 2038074743};
 	unsigned i;
 	unsigned num_ok = 0;
 	float percentage_ok;
@@ -384,9 +386,9 @@ float test_network (struct fann *network) {
 	percentage_ok = 100 * accuracy;
 	printf ("%d/%d (%.3f%%)\n", num_ok, global_training_item_count, percentage_ok);
 
-	/* for (i = 0; i < 7; i++) {
-		show_results (network, global_training_set [primes [i] % global_training_item_count]);
-	} */
+	for (i = 0; i < 7; i++) {
+		//show_results (network, global_training_set [primes [i] % global_training_item_count]);
+	}
 	return accuracy;
 }
 

@@ -77,7 +77,7 @@ foreach ($syllables as $syllable) {
 	if ($retval == 0) {
 		$wav_filename = "wav/$syllable.wav";
 		$output = [];
-		exec ("espeak -v es -x -w $wav_filename $syllable", $output);
+		exec ("espeak -v mb-es1 -x -w $wav_filename $syllable", $output);
 		$pronunctiation = $output [0];
 		fwrite ($pronunctiation_file, "$syllable|$pronunctiation\n");
 		fwrite ($wavlist_file, "$wav_filename\n");
@@ -100,7 +100,7 @@ foreach ($syllables as $syllable) {
 
 fclose ($wavlist_file);
 fclose ($pronunctiation_file);
-exec ("/home/pablo/dev/spectvox/bin/spectvox -H -r -p wav_list.txt");
+exec ("/home/pablo/dev/spectvox/bin/spectvox -r -p wav_list.txt");
 $pronunctiation_file = fopen ("pronunctiation.txt", "a");
 $wavlist_file = fopen ("wav_list.txt", "w");
 foreach (glob ("wav/*.png") as $filename) {

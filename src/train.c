@@ -3,20 +3,14 @@
 #include <stdbool.h>
 #include <string.h>
 #include <fann.h>
+#include "common.h"
 
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
-#define BUFFER_SIZE 14000
-#define NEURONS_INPUT_LAYER 12
+#define TRAINING_BUFFER_SIZE 14000
 #define NEURONS_HIDDEN_LAYER 64
-#define PHONEME "abdefgijJklmnopRr*stuwx"
-#define THRESHOLD 0.9
+#define TRAINING_THRESHOLD 0.9
 #define TRAINING_SET_SIZE 667
-#define SPECTROGRAM_OFFSET_START 256
-#define SPECTROGRAM_OFFSET_END 4096
-#define SPECTROGRAM_WINDOW 128
-#define MEAN_WEIGHT 5
-#define SHARP_WEIGHT 1
 #define ACCURACY_STOP_TRAINING 0.9
 #define NUM_PHONEME_SYNONYMS 8
 
@@ -51,15 +45,7 @@ void bubble_sort (char *word);
 unsigned load_training_data (FILE *list);
 long load_word_data (char *word, double **buffer);
 void replace_phoneme_synonyms (char *phoneme);
-long load_raw_file_data (char *filename, double **buffer);
-fann_type *flat_data (double *data, long data_length);
-fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs);
-fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_freqs);
 void training_data_callback (unsigned num, unsigned num_input, unsigned num_output, fann_type *input , fann_type *output);
-void clean_buffer ();
-fann_type *get_result_vector (char *phoneme);
-char *result_vector_to_string (fann_type *vector);
-char *flat_data_to_string (fann_type *flatted_data, unsigned length);
 void train_network (struct fann *network, struct fann_train_data *training_data);
 void train_network_iteration (struct fann *network, struct training_item *item);
 float test_network (struct fann *network);
@@ -216,157 +202,10 @@ long load_word_data (char *word, double **buffer) {
 	strcat (raw_filename, "/");
 	strcat (raw_filename, word);
 	strcat (raw_filename, ".raw");
-	long total_readed = load_raw_file_data (raw_filename, buffer);
+	long total_readed = load_raw_file_data (raw_filename, buffer, TRAINING_BUFFER_SIZE);
 
 	free (raw_filename);
 	return total_readed;
-}
-
-long load_raw_file_data (char *filename, double **buffer) {
-	FILE *file = fopen (filename, "r");
-	unsigned stop = 0;
-	long total_readed = 0;
-
-	if (file == NULL) {
-		fprintf (stderr, "Error: No se puede leer el archivo %s\n", filename);
-		return -1;
-	}
-
-	double *tmp_data = malloc (sizeof (double) * BUFFER_SIZE);
-	memset (tmp_data, '\0', BUFFER_SIZE * sizeof (double));
-
-	/* Skip offset pixels */
-	fseek (file, SPECTROGRAM_OFFSET_START * sizeof (double), SEEK_SET);
-
-	while (!stop) {
-
-		long readed = fread (tmp_data + total_readed, sizeof (double), SPECTROGRAM_WINDOW, file);
-		total_readed += readed;
-
-		if (feof (file)) {
-			stop = 1;
-		} else if (total_readed + SPECTROGRAM_WINDOW > BUFFER_SIZE) {
-			stop = 1;
-			//fprintf (stderr, "Warning: Archivo demasiado grande: %s.\n", filename);
-		}
-	}
-	
-	fclose (file);
-	*buffer = tmp_data;
-	return (total_readed) - (SPECTROGRAM_OFFSET_END);
-}
-
-fann_type *flat_data (double *data, long data_length) {
-	unsigned num_freqs = NEURONS_INPUT_LAYER;
-	fann_type *flatted_data = malloc (NEURONS_INPUT_LAYER * sizeof (fann_type));
-	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
-	fann_type *sharp = get_sharp_histogram (data, data_length, num_freqs);
-
-	//memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
-	memcpy (flatted_data, sharp, num_freqs * sizeof (fann_type));
-
-	//free (means);
-	free (sharp);
-	return flatted_data;
-}
-
-fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs) {
-	long i;
-	unsigned freq;
-	fann_type *means = malloc (num_freqs * sizeof (fann_type));
-
-	for (freq=0; freq < num_freqs; freq++) {
-		means [freq] = 0;
-	}
-
-	if (data_length == 0) {
-		fprintf (stderr, "ERROR: data_length es cero\n");
-		return means;
-	}
-
-	for (i=0; i < data_length; i++) {
-		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/num_freqs);
-		means [freq] += (data [i]) / (SPECTROGRAM_WINDOW/num_freqs);
-
-	}
-
-	for (freq=0; freq < num_freqs; freq++) {
-		means [freq] = MEAN_WEIGHT * (means [freq] / (data_length/SPECTROGRAM_WINDOW));
-	}
-
-	return means;
-}
-
-fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_freqs) {
-
-	long i;
-	unsigned freq;
-	fann_type *sharp = malloc (num_freqs * sizeof (fann_type));
-
-	for (freq=0; freq < num_freqs; freq++) {
-		sharp [freq] = 0;
-	}
-
-	double prev_pixel = 0.5;
-	for (i=0; i < data_length; i++) {
-		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/num_freqs);
-		sharp [freq] += fabsf (prev_pixel - data [i]);
-		prev_pixel = data [i];
-	}
-
-	for (freq=0; freq < num_freqs; freq++) {
-		sharp [freq] = SHARP_WEIGHT * (sharp [freq] / (data_length/SPECTROGRAM_WINDOW));
-	}
-
-	return sharp;
-}
-
-
-fann_type *get_result_vector (char *phoneme) {
-	fann_type *vector = malloc (strlen (PHONEME) * sizeof (fann_type));
-	int pos;
-	int num_phoneme = strlen (PHONEME);
-	for (pos = 0; pos < strlen (PHONEME); pos++) {
-		if (index (phoneme, PHONEME [pos]) != NULL) {
-			vector [pos] = 1.0;
-		} else {
-			vector [pos] = 0.0;
-		}
-	}
-	return vector;
-}
-
-char *result_vector_to_string (fann_type *vector) {
-	int num_phoneme_symbols = strlen (PHONEME);
-	char *phoneme = malloc (sizeof (char) * (num_phoneme_symbols +1));
-	int out_pos = 0;
-	int pos;
-	for (pos=0; pos < num_phoneme_symbols; pos++) {
-		if (vector [pos] > THRESHOLD) {
-			phoneme [out_pos] = PHONEME[pos];	
-			out_pos++;
-		}
-	}
-	phoneme [out_pos] = '\0';
-	return phoneme;
-}
-
-char *flat_data_to_string (fann_type *flatted_data, unsigned length) {
-	char *ret = malloc ((length + 1) * sizeof (char));
-	int i;
-	for (i=0; i < length; i++) {
-		int digit = (10 * flatted_data[i]);
-		if (digit < 0) {
-			digit = 0;
-		} else if (digit > 9) {
-			digit = 9;
-		}
-		char car = '0' + digit;
-		ret [i] = car;
-	}
-
-	ret [length] = '\0';
-	return ret;
 }
 
 float test_network (struct fann *network) {
@@ -395,8 +234,8 @@ float test_network (struct fann *network) {
 bool test_item (struct fann *network, struct training_item item) {
 	bool ok = false;
 	fann_type *result = fann_run (network, item.data_flatted);
-	char *result_string = result_vector_to_string (result);
-	char *expected_string = result_vector_to_string (item.expected_result);
+	char *result_string = result_vector_to_string (result, TRAINING_THRESHOLD);
+	char *expected_string = result_vector_to_string (item.expected_result, TRAINING_THRESHOLD);
 	ok = (strcmp (result_string, expected_string) == 0);
 	free (result_string); free (expected_string);
 	return ok;
@@ -405,9 +244,9 @@ bool test_item (struct fann *network, struct training_item item) {
 
 void show_results (struct fann *network, struct training_item item) {
 	fann_type *result = fann_run (network, item.data_flatted);
-	char *result_string = result_vector_to_string (result);
+	char *result_string = result_vector_to_string (result, TRAINING_THRESHOLD);
 	char *input_string = flat_data_to_string (item.data_flatted, NEURONS_INPUT_LAYER);
-	char *expected_string = result_vector_to_string (item.expected_result);
+	char *expected_string = result_vector_to_string (item.expected_result, TRAINING_THRESHOLD);
 	char *success_string = (strcmp (result_string, expected_string) == 0)? "OK!": "";
 	printf ("%s:\t [%s]  =>  (%s | %s)\t%s\n", item.word, input_string, result_string, expected_string, success_string);
 	free (expected_string);

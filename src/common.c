@@ -4,8 +4,14 @@
 #include <string.h>
 #include "common.h"
 
-long load_raw_file_data (char *filename, double **buffer, long buffer_size) {
+long load_raw_file_data (char *filename, double **buffer) {
 	FILE *file = fopen (filename, "r");
+
+	fseek (file, 0L, SEEK_END);
+	long filesize = ftell (file);
+	fseek (file, 0L, SEEK_SET);
+	long buffer_size = filesize / sizeof (double) ;
+
 	unsigned stop = 0;
 	long total_readed = 0;
 

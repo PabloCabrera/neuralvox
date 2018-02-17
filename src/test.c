@@ -3,8 +3,7 @@
 #include <string.h>
 #include "common.h"
 
-#define TESTING_BUFFER_SIZE 8388608 //64 MiB
-#define TESTING_THRESHOLD 0.97
+#define TESTING_THRESHOLD 0.5
 #define SLICE_WIDTH 18
 #define SLICE_STEP 14
 #define NUM_EXAMPLES 8
@@ -57,7 +56,7 @@ int main (int argc, char *args[]) {
 void test_file (struct fann *network, char *filename, FILE *jsfile) {
 	FILE *file = fopen (filename, "r");
 	double *data_buffer;
-	long data_length = load_raw_file_data (filename, &data_buffer, TESTING_BUFFER_SIZE);
+	long data_length = load_raw_file_data (filename, &data_buffer);
 	long num_slices = (data_length - SPECTROGRAM_OFFSET_START - SPECTROGRAM_OFFSET_END) / (SPECTROGRAM_WINDOW * SLICE_STEP);
 	fann_type **slices = get_slices (data_buffer, num_slices, SLICE_WIDTH, SLICE_STEP);
 	unsigned i;

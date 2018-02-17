@@ -6,7 +6,7 @@
 #define MEAN_WEIGHT 5
 #define SHARP_WEIGHT 1
 
-long load_raw_file_data (char *filename, double **data_buffer, long buffer_size);
+long load_raw_file_data (char *filename, double **data_buffer);
 fann_type *flat_data (double *data, long data_length);
 fann_type *get_means_histogram (double *data, long data_length, unsigned num_freqs);
 fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_freqs);

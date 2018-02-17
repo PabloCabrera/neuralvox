@@ -7,7 +7,6 @@
 
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
-#define TRAINING_BUFFER_SIZE 14000
 #define NEURONS_HIDDEN_LAYER 64
 #define TRAINING_THRESHOLD 0.9
 #define TRAINING_SET_SIZE 667
@@ -202,7 +201,7 @@ long load_word_data (char *word, double **buffer) {
 	strcat (raw_filename, "/");
 	strcat (raw_filename, word);
 	strcat (raw_filename, ".raw");
-	long total_readed = load_raw_file_data (raw_filename, buffer, TRAINING_BUFFER_SIZE);
+	long total_readed = load_raw_file_data (raw_filename, buffer);
 
 	free (raw_filename);
 	return total_readed;

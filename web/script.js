@@ -88,7 +88,7 @@ function stop_slice_updater () {
 }
 
 function update_slices () {
-	var currentPos = Audio.currentTime / Audio.duration;
+	var currentPos = (Audio.currentTime + 0.05) / Audio.duration;
 	for (var i = 0; i < Slices.length; i++) {
 		if (Slices[i].start <= currentPos && Slices[i].end > currentPos) {
 			Slices[i].node.classList.add ("active");

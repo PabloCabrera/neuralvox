@@ -48,7 +48,7 @@ char *get_slice_info_text (struct slice_info *info);
 
 /* FUNCTIONS */
 int main (int argc, char *args[]) {
-	FILE *jsfile = fopen ("data.js", "w");
+	FILE *jsfile = fopen ("web/data.js", "w");
 	fprintf (jsfile, "Neural = [\n");
 	struct fann *network = fann_create_from_file ("network.fann");
 	unsigned i;

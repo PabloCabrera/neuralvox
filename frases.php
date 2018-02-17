@@ -3,6 +3,7 @@
 @mkdir ("wav");
 @mkdir ("raw");
 @mkdir ("png");
+@mkdir ("web/png");
 
 $in_file = fopen ("frases.txt", "r");
 $out_file = fopen ("output.txt", "w");
@@ -23,6 +24,7 @@ fclose ($in_file);
 
 exec ("spectvox -pr wav_list.txt");
 foreach (glob ("wav/*.png") as $filename) {
+	copy ($filename, str_replace ("wav/", "web/png/", $filename));
 	rename ($filename, str_replace ("wav/", "png/", $filename));
 }
 foreach (glob ("wav/*.raw") as $filename) {

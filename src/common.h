@@ -1,5 +1,5 @@
 #define NEURONS_INPUT_LAYER 12
-#define PHONEME "abdefgijJklmnopRr*stuwx"
+#define PHONEME "abdefgijklmnopRr*stuwx"
 #define SPECTROGRAM_WINDOW 128
 #define SPECTROGRAM_OFFSET_START 0
 #define SPECTROGRAM_OFFSET_END 4096

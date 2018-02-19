@@ -1,6 +1,7 @@
 Slices = [];
 SliceUpdater = null;
 Audio = null;
+Cursor = null;
 
 function init () {
 	init_select ();
@@ -77,6 +78,7 @@ function scale_slice (value, spectrogram_width) {
 }
 
 function start_slice_updater () {
+	Cursor = document.querySelector (".playing_cursor");
 	SliceUpdater = window.setInterval (update_slices, 20);
 }
 
@@ -88,7 +90,8 @@ function stop_slice_updater () {
 }
 
 function update_slices () {
-	var currentPos = (Audio.currentTime + 0.05) / Audio.duration;
+	var currentPos = (Audio.currentTime) / Audio.duration;
+	Cursor.style.left = (100 * currentPos) + "%"
 	for (var i = 0; i < Slices.length; i++) {
 		if (Slices[i].start <= currentPos && Slices[i].end > currentPos) {
 			Slices[i].node.classList.add ("active");

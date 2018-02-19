@@ -5,9 +5,12 @@
 #include <fann.h>
 #include "common.h"
 
-#define NEURONS_HIDDEN_LAYER 64
+#define NEURONS_HIDDEN_LAYER 256
 #define NUM_TRAINING_EXAMPLES 8000
 #define SLICE_WIDTH 18
+#define MAX_TRAIN_EPOCHS 100000
+#define EPOCHS_BETWEEN_REPORT 1000
+#define DESIRED_ERROR 0.0001
 
 /* DATA TYPES */
 struct training_item {
@@ -28,6 +31,7 @@ struct training_dataset *global_dataset;
 struct fann *get_network ();
 struct training_dataset *get_training_dataset ();
 void train_network (struct fann *network, struct training_dataset *dataset);
+//float train_network_epoch (struct fann *network, struct training_dataset *dataset);
 long generate_train_items (double *raw_data, long data_length, struct training_item *output_start, char phoneme);
 void callback_training (unsigned num, unsigned num_input, unsigned num_output, fann_type *input , fann_type *output);
 
@@ -104,9 +108,34 @@ long generate_train_items (double *raw_data, long data_length, struct training_i
 void train_network (struct fann *network, struct training_dataset *dataset) {
 	global_dataset = dataset;
 	struct fann_train_data *train_data = fann_create_train_from_callback (dataset-> num_items, NEURONS_INPUT_LAYER, strlen (PHONEME), callback_training);
-	fann_train_on_data (network, train_data, 1000000, 1000, 0.00001);
+	fann_train_on_data (network, train_data, MAX_TRAIN_EPOCHS, EPOCHS_BETWEEN_REPORT, DESIRED_ERROR);
+	//long i;
+	//for (i=0; i < MAX_TRAIN_EPOCHS; i++) {
+		//train_network_epoch (network, dataset);
+	//}
+}
+
+/*
+float train_network_epoch (struct fann *network, struct training_dataset *dataset) {
+	long i;
+	for (i=0; i < dataset->num_items; i++) {
+		struct training_item *item = &(dataset-> items [i]);
+		fann_type *current_result = fann_run (network, item-> data_flat);
+		fann_type *expected_result = malloc (sizeof (fann_type) * strlen (PHONEME));
+		int j;
+		for (j = 0; j < strlen (PHONEME); j++) {
+			if (PHONEME[j] == item-> phoneme) {
+				expected_result [j] = 1.0;
+			} else {
+				expected_result [j] = current_result [j] / strlen (PHONEME);
+			}
+		}
+		fann_train (network, item-> data_flat, expected_result);
+		free (expected_result);
+	}
 	fann_save (network, "network.fann");
 }
+*/
 
 void callback_training (unsigned num, unsigned num_input, unsigned num_output, fann_type *input , fann_type *output) {
 	char phoneme_str [2] = {'X', '\0'};

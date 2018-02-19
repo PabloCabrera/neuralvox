@@ -8,10 +8,14 @@
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
 #define NEURONS_HIDDEN_LAYER 64
-#define TRAINING_THRESHOLD 0.9
-#define TRAINING_SET_SIZE 667
-#define ACCURACY_STOP_TRAINING 0.9
+#define TRAINING_THRESHOLD 0.8
+#define TRAINING_SET_SIZE 911
 #define NUM_PHONEME_SYNONYMS 8
+#define ACCURACY_STOP_TRAINING 0.8
+//#define MAX_TRAIN_EPOCHS 1000000
+//#define EPOCHS_BETWEEN_REPORT 1000
+//#define DESIRED_ERROR 0.0001
+
 
 char PHONEME_SYNONYMS[][2] = {
 	{'I', 'i'},
@@ -188,6 +192,8 @@ void train_network (struct fann *network, struct fann_train_data *train_data) {
 			}
 		}
 	}
+	
+	//fann_train_on_data (network, train_data, MAX_TRAIN_EPOCHS, EPOCHS_BETWEEN_REPORT, DESIRED_ERROR);
 	fann_destroy_train (train_data);
 }
 

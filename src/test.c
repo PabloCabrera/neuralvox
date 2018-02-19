@@ -3,9 +3,9 @@
 #include <string.h>
 #include "common.h"
 
-#define TESTING_THRESHOLD 0.5
-#define SLICE_WIDTH 18
-#define SLICE_STEP 14
+#define TESTING_THRESHOLD 0.96
+#define SLICE_WIDTH 16 
+#define SLICE_STEP 12
 #define NUM_EXAMPLES 8
 
 /* DATA TYPES */

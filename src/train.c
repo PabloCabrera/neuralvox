@@ -9,19 +9,22 @@
 #define TRAINING_RAW_DIR "raw"
 #define NEURONS_HIDDEN_LAYER 64
 #define TRAINING_THRESHOLD 0.8
-#define TRAINING_SET_SIZE 911
-#define NUM_PHONEME_SYNONYMS 8
-#define ACCURACY_STOP_TRAINING 0.8
+#define TRAINING_SET_SIZE 2200
+#define LEARNING_RATE_INITIAL 0.3
+#define LEARNING_RATE_EPOCH_MULTIPLIER 0.999
+#define LEARNING_RATE_MIN 0.001
+#define ACCURACY_STOP_TRAINING 0.83
 //#define MAX_TRAIN_EPOCHS 1000000
 //#define EPOCHS_BETWEEN_REPORT 1000
 //#define DESIRED_ERROR 0.0001
 
 
+#define NUM_PHONEME_SYNONYMS 8
 char PHONEME_SYNONYMS[][2] = {
 	{'I', 'i'},
 	{'O', 'o'},
 	{'E', 'e'},
-	{'T', 's'},
+	{'Q', 'g'},
 	{'^', 'j'},
 	{'J', 'j'},
 	{'B', 'b'},
@@ -39,7 +42,9 @@ struct training_item {
 
 /* GLOBAL VARIABLES */
 struct training_item global_training_set [TRAINING_SET_SIZE];
+struct training_item global_validation_set [TRAINING_SET_SIZE];
 unsigned global_training_item_count = 0;
+unsigned global_validation_item_count = 0;
 
 
 /* FUNCTION PROTOTYPES */
@@ -61,9 +66,11 @@ int main (int arg_count, char *args[]) {
 	network = fann_create_from_file ("network.fann");
 	if (network == NULL) {
 		fprintf (stderr, "Creando red...\n");
-		network = fann_create_shortcut (
-			3,
+		network = fann_create_standard (
+			5,
 			NEURONS_INPUT_LAYER,
+			NEURONS_HIDDEN_LAYER,
+			NEURONS_HIDDEN_LAYER,
 			NEURONS_HIDDEN_LAYER,
 			strlen (PHONEME));
 		fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
@@ -102,14 +109,19 @@ unsigned load_training_data (FILE *list) {
 		info.word = strdup (word);
 		info.data_flatted = flat_data (tmp_data, info.data_length);
 		
-		global_training_set [num_word] = info;
+		if (rand () % 10 > 0) {
+			global_training_set [global_training_item_count] = info;
+			global_training_item_count++;
+		} else {
+			global_validation_set [global_validation_item_count] = info;
+			global_validation_item_count++;
+		}
 
 		free (tmp_data);
 		free (line);
 		line = NULL;
 		num_word++;
 	}
-	global_training_item_count = num_word;
 	return num_word;
 }
 
@@ -175,23 +187,37 @@ void training_data_callback (unsigned num, unsigned num_input, unsigned num_outp
 
 void train_network (struct fann *network, struct fann_train_data *train_data) {
 	fprintf (stderr, "\nEstado inicial: ");
+	FILE *log = fopen ("train_log.txt", "w");
 	test_network (network);
 	unsigned num_word;
 	struct training_item *item;
 	unsigned num_iteration = 0;
 	bool stop = false;
+	double learning_rate = LEARNING_RATE_INITIAL;
+	fann_set_learning_rate (network, learning_rate);
+	printf ("learning_rate: %.8f\n", learning_rate);
 	while (!stop) {
 		fann_train_epoch (network, train_data);
 		num_iteration++;
-		if (num_iteration % 500 == 0) {
-			printf ("Iteración %d: ", num_iteration);
+		fprintf (log, "%ld\t%f\n", num_iteration, fann_get_MSE (network));
+		if (learning_rate > LEARNING_RATE_MIN) {
+			learning_rate = learning_rate * LEARNING_RATE_EPOCH_MULTIPLIER;
+			fann_set_learning_rate (network, learning_rate);
+		}
+		if (num_iteration % 50 == 0) {
+			printf ("Iteración %d: ", num_iteration, learning_rate);
+			fflush (log);
 			fann_save (network, "network.fann");
 			float accuracy = test_network (network);
 			if (accuracy >= ACCURACY_STOP_TRAINING) {
 				stop = true;
 			}
+			printf ("learning_rate: %.8f\n", learning_rate);
+			
 		}
 	}
+
+	fclose (log);
 	
 	//fann_train_on_data (network, train_data, MAX_TRAIN_EPOCHS, EPOCHS_BETWEEN_REPORT, DESIRED_ERROR);
 	fann_destroy_train (train_data);
@@ -219,19 +245,19 @@ float test_network (struct fann *network) {
 	unsigned num_ok = 0;
 	float percentage_ok;
 
-	for (i = 0; i < global_training_item_count; i++) {
-		if (test_item (network, global_training_set [i])) {
+	for (i = 0; i < global_validation_item_count; i++) {
+		if (test_item (network, global_validation_set [i])) {
 			num_ok++;
 		}
 	}
 
-	float accuracy = (((float) num_ok) / global_training_item_count);
+	float accuracy = (((float) num_ok) / global_validation_item_count);
 
 	percentage_ok = 100 * accuracy;
-	printf ("%d/%d (%.3f%%)\n", num_ok, global_training_item_count, percentage_ok);
+	printf ("%d/%d (%.3f%%)\n", num_ok, global_validation_item_count, percentage_ok);
 
 	for (i = 0; i < 7; i++) {
-		//show_results (network, global_training_set [primes [i] % global_training_item_count]);
+		show_results (network, global_validation_set [primes [i] % global_validation_item_count]);
 	}
 	return accuracy;
 }

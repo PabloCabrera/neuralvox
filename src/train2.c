@@ -5,7 +5,7 @@
 #include <fann.h>
 #include "common.h"
 
-#define NEURONS_HIDDEN_LAYER 256
+#define NEURONS_HIDDEN_LAYER 64
 #define NUM_TRAINING_EXAMPLES 8000
 #define SLICE_WIDTH 18
 #define MAX_TRAIN_EPOCHS 100000
@@ -52,8 +52,10 @@ struct fann *get_network () {
 	if (network == NULL) {
 		fprintf (stderr, "Creando red...\n");
 		network = fann_create_shortcut (
-			3,
+			5,
 			NEURONS_INPUT_LAYER,
+			NEURONS_HIDDEN_LAYER,
+			NEURONS_HIDDEN_LAYER,
 			NEURONS_HIDDEN_LAYER,
 			strlen (PHONEME));
 		fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
@@ -108,11 +110,27 @@ long generate_train_items (double *raw_data, long data_length, struct training_i
 void train_network (struct fann *network, struct training_dataset *dataset) {
 	global_dataset = dataset;
 	struct fann_train_data *train_data = fann_create_train_from_callback (dataset-> num_items, NEURONS_INPUT_LAYER, strlen (PHONEME), callback_training);
-	fann_train_on_data (network, train_data, MAX_TRAIN_EPOCHS, EPOCHS_BETWEEN_REPORT, DESIRED_ERROR);
-	//long i;
-	//for (i=0; i < MAX_TRAIN_EPOCHS; i++) {
-		//train_network_epoch (network, dataset);
-	//}
+	//fann_train_on_data (network, train_data, MAX_TRAIN_EPOCHS, EPOCHS_BETWEEN_REPORT, DESIRED_ERROR);
+	fprintf (stderr, "\nEstado inicial: ");
+	FILE *log = fopen ("train_log.txt", "w");
+	double learning_rate = 0.3;
+	printf ("learning_rate: %.8f\n", learning_rate);
+	long num_iteration;
+	fann_set_learning_rate (network, learning_rate);
+	for (num_iteration=0; num_iteration < MAX_TRAIN_EPOCHS; num_iteration++) {
+		fann_train_epoch (network, train_data);
+		fprintf (log, "%ld\t%f\n", num_iteration, fann_get_MSE (network));
+		if (num_iteration % 500 == 0) {
+			printf ("Iteración %d: ", num_iteration, learning_rate);
+			fflush (log);
+			fann_save (network, "network.fann");
+			learning_rate = learning_rate * 0.75;
+			fann_set_learning_rate (network, learning_rate);
+			printf ("learning_rate: %.8f\n", learning_rate);
+		}
+		num_iteration++;
+	}
+	fclose (log);
 }
 
 /*

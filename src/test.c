@@ -4,9 +4,9 @@
 #include "common.h"
 
 #define TESTING_THRESHOLD 0.96
-#define SLICE_WIDTH 16 
+#define SLICE_WIDTH 12
 #define SLICE_STEP 12
-#define NUM_EXAMPLES 8
+#define NUM_EXAMPLES 5
 
 /* DATA TYPES */
 struct slice_info {
@@ -57,7 +57,7 @@ void test_file (struct fann *network, char *filename, FILE *jsfile) {
 	FILE *file = fopen (filename, "r");
 	double *data_buffer;
 	long data_length = load_raw_file_data (filename, &data_buffer);
-	long num_slices = (data_length - SPECTROGRAM_OFFSET_START - SPECTROGRAM_OFFSET_END) / (SPECTROGRAM_WINDOW * SLICE_STEP);
+	long num_slices = (data_length) / (SPECTROGRAM_WINDOW * SLICE_STEP);
 	fann_type **slices = get_slices (data_buffer, num_slices, SLICE_WIDTH, SLICE_STEP);
 	unsigned i;
 	char **str_results = malloc (num_slices * sizeof (char*));
@@ -100,7 +100,7 @@ void generate_js_info (char *raw_filename, long data_length, unsigned num_slices
 		struct slice_info *slice = &(info->slices[i]);
 		slice-> text = results [i];
 		slice-> width = SLICE_WIDTH;
-		slice-> start = (SPECTROGRAM_OFFSET_START / SPECTROGRAM_WINDOW) + (i * SLICE_STEP);
+		slice-> start = (i * SLICE_STEP);
 	}
 	
 	write_spectrogram_info (info, jsfile);

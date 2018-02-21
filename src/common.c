@@ -45,16 +45,45 @@ long load_raw_file_data (char *filename, double **buffer) {
 }
 
 fann_type *flat_data (double *data, long data_length) {
-	unsigned num_freqs = NEURONS_INPUT_LAYER;
+	if (SPECTROGRAM_COLOR) {
+		return flat_data_color (data, data_length);
+	} else {
+		return flat_data_grayscale (data, data_length, NEURONS_INPUT_LAYER);
+	}
+}
+
+fann_type *flat_data_color (double *data, long data_length) {
+	double *data_current = malloc ((data_length/3) * sizeof (double));
+	fann_type *flat_data_current;
+	fann_type *flatted_data = malloc (sizeof (fann_type) * NEURONS_INPUT_LAYER);
+	long channel;
+	for (channel=0; channel<3; channel++) {
+		long i;
+		for (i=0; i < (data_length/3); i++) {
+			data_current [i] = data [3*i] + channel;
+		}
+		flat_data_current = flat_data_grayscale (data_current, data_length/3, NEURONS_INPUT_LAYER/3);
+		memcpy (flatted_data + channel * NEURONS_INPUT_LAYER/3, flat_data_current, sizeof (fann_type) * NEURONS_INPUT_LAYER/3);
+		free (flat_data_current);
+	}
+	free (data_current);
+	return flatted_data;
+}
+
+fann_type *flat_data_grayscale (double *data, long data_length, unsigned out_length) {
+	unsigned num_freqs = out_length/2;
 	fann_type *flatted_data = malloc (NEURONS_INPUT_LAYER * sizeof (fann_type));
-	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
 	fann_type *sharp = get_sharp_histogram (data, data_length, num_freqs);
+	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
+	fann_type *max = get_max_histogram (data, data_length, num_freqs);
 
-	//memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
 	memcpy (flatted_data, sharp, num_freqs * sizeof (fann_type));
+	//memcpy (flatted_data + num_freqs, means, num_freqs * sizeof (fann_type));
+	memcpy (flatted_data + num_freqs, max, num_freqs * sizeof (fann_type));
 
-	//free (means);
 	free (sharp);
+	//free (means);
+	free (max);
 	return flatted_data;
 }
 
@@ -107,6 +136,26 @@ fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_fre
 	}
 
 	return sharp;
+}
+
+fann_type *get_max_histogram (double *data, long data_length, unsigned num_freqs) {
+
+	long i;
+	unsigned freq;
+	fann_type *max = malloc (num_freqs * sizeof (fann_type));
+
+	for (freq=0; freq < num_freqs; freq++) {
+		max [freq] = 0;
+	}
+
+	for (i=0; i < data_length; i++) {
+		freq = (i % SPECTROGRAM_WINDOW) / (SPECTROGRAM_WINDOW/num_freqs);
+		if (data[i] > max[freq]) {
+			max[freq] = data[i];
+		}
+	}
+
+	return max;
 }
 
 fann_type *get_result_vector (char *phoneme) {

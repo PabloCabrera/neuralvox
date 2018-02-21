@@ -65,7 +65,7 @@ function create_slices (slices, spectrogram_width) {
 }
 
 function format_phoneme (phoneme) {
-	var letters = phoneme.toUpperCase().replace("*", "R").replace("J", "Y").replace("X", "J");
+	var letters = phoneme.toUpperCase().replace("*", "R").replace("T", "Z").replace("J", "Y").replace("X", "J");
 	var out="";
 	for (var i=0; i < letters.length; i++) {
 		out += letters[i] + "<br />";

@@ -17,7 +17,8 @@
 //#define MAX_TRAIN_EPOCHS 1000000
 #define EPOCHS_BETWEEN_REPORT 100
 //#define DESIRED_ERROR 0.0001
-#define NUM_VALIDATION_SAMPLES_SHOW 0
+#define NUM_VALIDATION_SAMPLES_SHOW 7
+#define BIFLAT_DATA_OFFSET 0.2
 
 
 #define NUM_PHONEME_SYNONYMS 8
@@ -108,7 +109,11 @@ unsigned load_training_data (FILE *list) {
 		info.expected_result = get_result_vector (info.phoneme);
 		info.data_length = load_word_data (word, &tmp_data);
 		info.word = strdup (word);
-		info.data_flatted = flat_data (tmp_data, info.data_length);
+		info.data_flatted = flat_data (tmp_data, info.data_length, NEURONS_INPUT_LAYER);
+		//info.data_flatted = biflat_data (tmp_data, info.data_length, NEURONS_INPUT_LAYER, BIFLAT_DATA_OFFSET);
+		if (DEBUG_MODE) {
+			printf ("DEBUG  %s\t", word);
+		}
 		
 		if (rand () % 10 > 0) {
 			global_training_set [global_training_item_count] = info;

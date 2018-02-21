@@ -1,12 +1,14 @@
 #include <fann.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "common.h"
 
-#define TESTING_THRESHOLD 0.92
-#define SLICE_WIDTH (10*NUM_CHANNELS)
-#define SLICE_STEP (10*NUM_CHANNELS)
+#define TESTING_THRESHOLD 0.8
+#define SLICE_WIDTH (16*NUM_CHANNELS)
+#define SLICE_STEP (16*NUM_CHANNELS)
 #define NUM_EXAMPLES 5
+#define BIFLAT_DATA_OFFSET 0.1
 
 /* DATA TYPES */
 struct slice_info {
@@ -79,7 +81,7 @@ fann_type **get_slices (double *data, unsigned num_slices, unsigned slice_width,
 	fann_type **slices = malloc (sizeof (fann_type*) * num_slices);
 	unsigned i;
 	for (i=0; i < num_slices; i++) {
-		slices[i] = flat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW);
+		slices[i] = flat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER);
 	}
 	return slices;
 }

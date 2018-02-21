@@ -1,5 +1,8 @@
 <?php
 
+$GENERATE_WORDS = false;
+$GENERATE_SYLLABLES = true;
+
 $common_h = explode ("\n", file_get_contents ("src/common.h"));
 $SPECTVOX_ARGS = "-pr";
 $color_def = preg_grep ("/.*define SPECTROGRAM_COLOR.*$/", $common_h);

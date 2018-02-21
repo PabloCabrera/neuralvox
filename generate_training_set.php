@@ -2,8 +2,9 @@
 require ("config.php");
 	
 function main () {
-	$words = get_words ();
-	$syllables = get_syllables ();
+	global $GENERATE_WORDS, $GENERATE_SYLLABLES;
+	$words = $GENERATE_WORDS? get_words (): [];
+	$syllables = $GENERATE_SYLLABLES? get_syllables (): 0;
 	$all_words = array_merge ($words, $syllables);
 	generate_data ($all_words);
 }

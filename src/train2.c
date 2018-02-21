@@ -98,7 +98,7 @@ long generate_train_items (double *raw_data, long data_length, struct training_i
 	unsigned i;
 	for (i=0; i < num_slices; i++) {
 		double *slice_start = raw_data + SLICE_WIDTH * SPECTROGRAM_WINDOW;
-		fann_type *flatted_data = flat_data (slice_start, SLICE_WIDTH * SPECTROGRAM_WINDOW);
+		fann_type *flatted_data = flat_data (slice_start, SLICE_WIDTH * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER);
 		struct training_item *item = output_start + i;
 		item-> phoneme = phoneme;
 		item-> data_flat = flatted_data;

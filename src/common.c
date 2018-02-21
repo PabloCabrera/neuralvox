@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <fann.h>
 #include <string.h>
 #include "common.h"
@@ -60,7 +61,7 @@ fann_type *flat_data_color (double *data, long data_length) {
 	for (channel=0; channel<3; channel++) {
 		long i;
 		for (i=0; i < (data_length/3); i++) {
-			data_current [i] = data [3*i] + channel;
+			data_current [i] = data [3*i + channel];
 		}
 		flat_data_current = flat_data_grayscale (data_current, data_length/3, NEURONS_INPUT_LAYER/3);
 		memcpy (flatted_data + channel * NEURONS_INPUT_LAYER/3, flat_data_current, sizeof (fann_type) * NEURONS_INPUT_LAYER/3);
@@ -71,18 +72,18 @@ fann_type *flat_data_color (double *data, long data_length) {
 }
 
 fann_type *flat_data_grayscale (double *data, long data_length, unsigned out_length) {
-	unsigned num_freqs = out_length/2;
+	unsigned num_freqs = out_length/3;
 	fann_type *flatted_data = malloc (NEURONS_INPUT_LAYER * sizeof (fann_type));
 	fann_type *sharp = get_sharp_histogram (data, data_length, num_freqs);
-	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
+	fann_type *means = get_means_histogram (data, data_length, num_freqs);
 	fann_type *max = get_max_histogram (data, data_length, num_freqs);
 
 	memcpy (flatted_data, sharp, num_freqs * sizeof (fann_type));
-	//memcpy (flatted_data + num_freqs, means, num_freqs * sizeof (fann_type));
-	memcpy (flatted_data + num_freqs, max, num_freqs * sizeof (fann_type));
+	memcpy (flatted_data + num_freqs, means, num_freqs * sizeof (fann_type));
+	memcpy (flatted_data + num_freqs + num_freqs, max, num_freqs * sizeof (fann_type));
 
 	free (sharp);
-	//free (means);
+	free (means);
 	free (max);
 	return flatted_data;
 }
@@ -108,7 +109,7 @@ fann_type *get_means_histogram (double *data, long data_length, unsigned num_fre
 	}
 
 	for (freq=0; freq < num_freqs; freq++) {
-		means [freq] = MEAN_WEIGHT * (means [freq] / (data_length/SPECTROGRAM_WINDOW));
+		means [freq] = tanh (5* (means [freq] / (data_length/SPECTROGRAM_WINDOW)));
 	}
 
 	return means;
@@ -132,7 +133,7 @@ fann_type *get_sharp_histogram (double *data, long data_length, unsigned num_fre
 	}
 
 	for (freq=0; freq < num_freqs; freq++) {
-		sharp [freq] = SHARP_WEIGHT * (sharp [freq] / (data_length/SPECTROGRAM_WINDOW));
+		sharp [freq] = tanh (sharp [freq] / (data_length/SPECTROGRAM_WINDOW));
 	}
 
 	return sharp;
@@ -191,13 +192,19 @@ char *flat_data_to_string (fann_type *flatted_data, unsigned length) {
 	char *ret = malloc ((length + 1) * sizeof (char));
 	int i;
 	for (i=0; i < length; i++) {
+		char car = '0';
 		int digit = (10 * flatted_data[i]);
-		if (digit < 0) {
-			digit = 0;
-		} else if (digit > 9) {
-			digit = 9;
+		if (digit < -25) {
+			car = '_';
+		} else if (digit < 0) {
+			car = 'z' - digit;
+		} else if (digit < 10) {
+			car = '0' + digit;
+		} else if (digit < 35) {
+			car = 'A' -10 + digit;
+		} else {
+			car = '+';
 		}
-		char car = '0' + digit;
 		ret [i] = car;
 	}
 

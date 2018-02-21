@@ -10,13 +10,14 @@
 #define NEURONS_HIDDEN_LAYER 64
 #define TRAINING_THRESHOLD 0.8
 #define TRAINING_SET_SIZE 2200
-#define LEARNING_RATE_INITIAL 0.3
+#define LEARNING_RATE_INITIAL 0.2
 #define LEARNING_RATE_EPOCH_MULTIPLIER 0.999
 #define LEARNING_RATE_MIN 0.001
-#define ACCURACY_STOP_TRAINING 0.83
+#define ACCURACY_STOP_TRAINING 0.3
 //#define MAX_TRAIN_EPOCHS 1000000
-//#define EPOCHS_BETWEEN_REPORT 1000
+#define EPOCHS_BETWEEN_REPORT 100
 //#define DESIRED_ERROR 0.0001
+#define NUM_VALIDATION_SAMPLES_SHOW 0
 
 
 #define NUM_PHONEME_SYNONYMS 8
@@ -194,8 +195,8 @@ void train_network (struct fann *network, struct fann_train_data *train_data) {
 	unsigned num_iteration = 0;
 	bool stop = false;
 	double learning_rate = LEARNING_RATE_INITIAL;
+	printf ("Learning Rate = %.8f\n", learning_rate);
 	fann_set_learning_rate (network, learning_rate);
-	printf ("learning_rate: %.8f\n", learning_rate);
 	while (!stop) {
 		fann_train_epoch (network, train_data);
 		num_iteration++;
@@ -204,16 +205,15 @@ void train_network (struct fann *network, struct fann_train_data *train_data) {
 			learning_rate = learning_rate * LEARNING_RATE_EPOCH_MULTIPLIER;
 			fann_set_learning_rate (network, learning_rate);
 		}
-		if (num_iteration % 50 == 0) {
-			printf ("Iteración %d: ", num_iteration, learning_rate);
+		if (num_iteration % EPOCHS_BETWEEN_REPORT == 0) {
+			printf ("[Iteración %d] ", num_iteration, learning_rate);
 			fflush (log);
 			fann_save (network, "network.fann");
 			float accuracy = test_network (network);
 			if (accuracy >= ACCURACY_STOP_TRAINING) {
 				stop = true;
 			}
-			printf ("learning_rate: %.8f\n", learning_rate);
-			
+			printf ("Learning Rate = %.8f\n", learning_rate);
 		}
 	}
 
@@ -254,9 +254,9 @@ float test_network (struct fann *network) {
 	float accuracy = (((float) num_ok) / global_validation_item_count);
 
 	percentage_ok = 100 * accuracy;
-	printf ("%d/%d (%.3f%%)\n", num_ok, global_validation_item_count, percentage_ok);
+	printf ("MSE: %.4f   Validación: %.3f%% (%d/%d)\n", fann_get_MSE (network), percentage_ok, num_ok, global_validation_item_count);
 
-	for (i = 0; i < 7; i++) {
+	for (i = 0; i < NUM_VALIDATION_SAMPLES_SHOW; i++) {
 		show_results (network, global_validation_set [primes [i] % global_validation_item_count]);
 	}
 	return accuracy;

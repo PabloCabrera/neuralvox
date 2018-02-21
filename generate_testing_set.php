@@ -1,4 +1,5 @@
 <?php
+require ("config.php");
 
 @mkdir ("raw");
 @mkdir ("web/wav");
@@ -28,7 +29,7 @@ fclose ($list_file);
 fclose ($out_file);
 fclose ($in_file);
 
-exec ("spectvox -pr wav_list.txt");
+exec ("$SPECTVOX_COMMAND wav_list.txt");
 foreach (glob ("wav/*.wav") as $filename) {
 	rename ($filename, str_replace ("wav/", "web/wav/", $filename));
 }

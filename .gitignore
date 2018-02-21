@@ -12,3 +12,4 @@ network_*
 web/data.js
 output.txt
 
+train_log.txt

@@ -1,4 +1,5 @@
 <?php
+require ("config.php");
 	
 function main () {
 	$words = get_words ();
@@ -38,6 +39,7 @@ function get_syllables () {
 
 	
 function generate_data ($words) {	
+	global $SPECTVOX_COMMAND;
 	create_dirs ();
 	$pronunctiation_file = fopen ("pronunctiation.txt", "w");
 	$wavlist_file = fopen ("wav_list.txt", "w");
@@ -65,7 +67,7 @@ function generate_data ($words) {
 		if ($count++ % 1000 == 0) {
 			fclose ($wavlist_file);
 			fclose ($pronunctiation_file);
-			exec ("spectvox -pr wav_list.txt");
+			exec ("$SPECTVOX_COMMAND wav_list.txt");
 			$pronunctiation_file = fopen ("pronunctiation.txt", "a");
 			$wavlist_file = fopen ("wav_list.txt", "w");
 			foreach (glob ("wav/*.png") as $filename) {
@@ -80,7 +82,7 @@ function generate_data ($words) {
 	
 	fclose ($wavlist_file);
 	fclose ($pronunctiation_file);
-	exec ("spectvox -pr wav_list.txt");
+	exec ("$SPECTVOX_COMMAND wav_list.txt");
 	$pronunctiation_file = fopen ("pronunctiation.txt", "a");
 	foreach (glob ("wav/*.png") as $filename) {
 		rename ($filename, str_replace ("wav/", "png/", $filename));

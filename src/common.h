@@ -1,11 +1,10 @@
-#define NEURONS_INPUT_LAYER 32
 #define PHONEME "abdefgijklmnopRr*stTuwx"
+#define SPECTROGRAM_COLOR 1
+#define NUM_CHANNELS (1+2*(SPECTROGRAM_COLOR))
 #define SPECTROGRAM_WINDOW 128
 #define SPECTROGRAM_OFFSET_START 0
-#define SPECTROGRAM_OFFSET_END 4096
-#define SPECTROGRAM_COLOR 0
-#define MEAN_WEIGHT 5
-#define SHARP_WEIGHT 1
+#define SPECTROGRAM_OFFSET_END (4096*NUM_CHANNELS)
+#define NEURONS_INPUT_LAYER (3*8*NUM_CHANNELS)
 
 long load_raw_file_data (char *filename, double **data_buffer);
 fann_type *flat_data (double *data, long data_length);

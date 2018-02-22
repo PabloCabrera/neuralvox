@@ -7,7 +7,9 @@
 
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
-#define NEURONS_HIDDEN_LAYER 64
+#define NEURONS_HIDDEN_LAYER_1 64
+#define NEURONS_HIDDEN_LAYER_2 128
+#define NEURONS_HIDDEN_LAYER_3 64
 #define TRAINING_THRESHOLD 0.8
 #define TRAINING_SET_SIZE 2200
 #define LEARNING_RATE_INITIAL 0.2
@@ -71,9 +73,9 @@ int main (int arg_count, char *args[]) {
 		network = fann_create_standard (
 			5,
 			NEURONS_INPUT_LAYER,
-			NEURONS_HIDDEN_LAYER,
-			NEURONS_HIDDEN_LAYER,
-			NEURONS_HIDDEN_LAYER,
+			NEURONS_HIDDEN_LAYER_1,
+			NEURONS_HIDDEN_LAYER_2,
+			NEURONS_HIDDEN_LAYER_3,
 			strlen (PHONEME));
 		fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
 		fann_set_activation_function_hidden (network, FANN_ELLIOT_SYMMETRIC);

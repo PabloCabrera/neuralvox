@@ -4,11 +4,11 @@
 #include <string.h>
 #include "common.h"
 
-#define TESTING_THRESHOLD 0.8
-#define SLICE_WIDTH (16*NUM_CHANNELS)
-#define SLICE_STEP (16*NUM_CHANNELS)
+#define TESTING_THRESHOLD 0.9
+#define SLICE_WIDTH (60*NUM_CHANNELS)
+#define SLICE_STEP (60*NUM_CHANNELS)
 #define NUM_EXAMPLES 5
-#define BIFLAT_DATA_OFFSET 0.1
+#define BIFLAT_DATA_OFFSET 0.2
 
 /* DATA TYPES */
 struct slice_info {
@@ -82,6 +82,7 @@ fann_type **get_slices (double *data, unsigned num_slices, unsigned slice_width,
 	unsigned i;
 	for (i=0; i < num_slices; i++) {
 		slices[i] = flat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER);
+		//slices[i] = biflat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER, BIFLAT_DATA_OFFSET);
 	}
 	return slices;
 }
@@ -92,7 +93,7 @@ void generate_js_info (char *raw_filename, long data_length, unsigned num_slices
 	struct spectrogram_info *info = malloc (sizeof (struct spectrogram_info));
 	info-> image_filename = png_filename;
 	info-> wav_filename = wav_filename;
-	info-> spectrogram_width = (data_length / SPECTROGRAM_WINDOW);
+	info-> spectrogram_width = ((data_length+SPECTROGRAM_OFFSET_START+SPECTROGRAM_OFFSET_END) / SPECTROGRAM_WINDOW);
 	info-> spectrogram_height = SPECTROGRAM_WINDOW;
 	info-> num_slices = num_slices;
 	info-> slices = malloc (num_slices * sizeof (struct slice_info));

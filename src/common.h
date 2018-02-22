@@ -3,9 +3,9 @@
 #define NUM_CHANNELS (1+2*(SPECTROGRAM_COLOR))
 #define SPECTROGRAM_WINDOW 128
 #define SPECTROGRAM_OFFSET_START 0
-#define SPECTROGRAM_OFFSET_END (32*SPECTROGRAM_WINDOW*NUM_CHANNELS)
-#define NEURONS_INPUT_LAYER (2*16*NUM_CHANNELS)
-#define DEBUG_MODE 1
+#define SPECTROGRAM_OFFSET_END (32*4*SPECTROGRAM_WINDOW*NUM_CHANNELS)
+#define NEURONS_INPUT_LAYER (16*NUM_CHANNELS)
+#define DEBUG_MODE 0
 
 long load_raw_file_data (char *filename, double **data_buffer);
 fann_type *biflat_data (double *data, long data_length, unsigned out_length, double offset);

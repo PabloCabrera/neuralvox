@@ -62,6 +62,8 @@ fann_type *biflat_data (double *data, long data_length, unsigned out_length, dou
 }
 
 long biflat_best_cut (double *data, long data_length, double offset) {
+	return data_length / 2;
+	/*
 	if (offset < 0.0 || offset > 0.5) {
 		fprintf (stderr, "Error: biflat_best_cut: offset outside range [0.0 - 0.5]\n");
 		return (data_length/2);
@@ -70,6 +72,7 @@ long biflat_best_cut (double *data, long data_length, double offset) {
 	} else {
 		return biflat_best_cut_grayscale (data, data_length, offset);
 	}
+	*/
 }
 
 long biflat_best_cut_color (double *data, long data_length, double offset) {
@@ -200,18 +203,18 @@ fann_type *flat_data_color (double *data, long data_length, unsigned out_length)
 }
 
 fann_type *flat_data_grayscale (double *data, long data_length, unsigned out_length) {
-	unsigned num_freqs = out_length/2;
+	unsigned num_freqs = out_length;
 	fann_type *flatted_data = malloc (out_length * sizeof (fann_type));
 	fann_type *sharp = get_sharp_histogram (data, data_length, num_freqs);
-	fann_type *means = get_means_histogram (data, data_length, num_freqs);
+	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
 	//fann_type *max = get_max_histogram (data, data_length, num_freqs);
 
 	memcpy (flatted_data, sharp, num_freqs * sizeof (fann_type));
-	memcpy (flatted_data + num_freqs, means, num_freqs * sizeof (fann_type));
-	//memcpy (flatted_data + num_freqs + num_freqs, max, num_freqs * sizeof (fann_type));
+	//memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
+	//memcpy (flatted_data+num_freqs, max, num_freqs * sizeof (fann_type));
 
 	free (sharp);
-	free (means);
+	//free (means);
 	//free (max);
 	return flatted_data;
 }

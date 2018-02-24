@@ -8,7 +8,7 @@
 #define TRAINING_PRONUNCTATION_FILE "pronunctiation.txt"
 #define TRAINING_RAW_DIR "raw"
 #define NEURONS_HIDDEN_LAYER_1 64
-#define NEURONS_HIDDEN_LAYER_2 128
+#define NEURONS_HIDDEN_LAYER_2 64
 #define NEURONS_HIDDEN_LAYER_3 64
 #define TRAINING_THRESHOLD 0.8
 #define TRAINING_SET_SIZE 2200
@@ -16,10 +16,8 @@
 #define LEARNING_RATE_EPOCH_MULTIPLIER 0.999
 #define LEARNING_RATE_MIN 0.001
 #define ACCURACY_STOP_TRAINING 0.3
-//#define MAX_TRAIN_EPOCHS 1000000
 #define EPOCHS_BETWEEN_REPORT 100
-//#define DESIRED_ERROR 0.0001
-#define NUM_VALIDATION_SAMPLES_SHOW 7
+#define NUM_VALIDATION_SAMPLES_SHOW 0
 #define BIFLAT_DATA_OFFSET 0.2
 
 
@@ -71,11 +69,10 @@ int main (int arg_count, char *args[]) {
 	if (network == NULL) {
 		fprintf (stderr, "Creando red...\n");
 		network = fann_create_standard (
-			5,
+			4,
 			NEURONS_INPUT_LAYER,
 			NEURONS_HIDDEN_LAYER_1,
 			NEURONS_HIDDEN_LAYER_2,
-			NEURONS_HIDDEN_LAYER_3,
 			strlen (PHONEME));
 		fann_set_training_algorithm (network, FANN_TRAIN_INCREMENTAL);
 		fann_set_activation_function_hidden (network, FANN_ELLIOT_SYMMETRIC);
@@ -111,8 +108,11 @@ unsigned load_training_data (FILE *list) {
 		info.expected_result = get_result_vector (info.phoneme);
 		info.data_length = load_word_data (word, &tmp_data);
 		info.word = strdup (word);
-		info.data_flatted = flat_data (tmp_data, info.data_length, NEURONS_INPUT_LAYER);
-		//info.data_flatted = biflat_data (tmp_data, info.data_length, NEURONS_INPUT_LAYER, BIFLAT_DATA_OFFSET);
+		if (USE_BIFLAT) {
+			info.data_flatted = biflat_data (tmp_data, info.data_length, NEURONS_INPUT_LAYER, BIFLAT_DATA_OFFSET);
+		} else {
+			info.data_flatted = flat_data (tmp_data, info.data_length, NEURONS_INPUT_LAYER);
+		}
 		if (DEBUG_MODE) {
 			printf ("DEBUG  %s\t", word);
 		}
@@ -204,6 +204,7 @@ void train_network (struct fann *network, struct fann_train_data *train_data) {
 	double learning_rate = LEARNING_RATE_INITIAL;
 	printf ("Learning Rate = %.8f\n", learning_rate);
 	fann_set_learning_rate (network, learning_rate);
+	double previous_MSE = 0.0;
 	while (!stop) {
 		fann_train_epoch (network, train_data);
 		num_iteration++;
@@ -216,17 +217,19 @@ void train_network (struct fann *network, struct fann_train_data *train_data) {
 			printf ("[Iteración %d] ", num_iteration, learning_rate);
 			fflush (log);
 			fann_save (network, "network.fann");
-			float accuracy = test_network (network);
-			if (accuracy >= ACCURACY_STOP_TRAINING) {
+			test_network (network);
+			double current_MSE = fann_get_MSE (network);
+			if (fabs (current_MSE - previous_MSE) < 0.0001 ) {
 				stop = true;
+			} else {
+				previous_MSE = current_MSE;
+				printf ("Learning Rate = %.8f\n", learning_rate);
 			}
-			printf ("Learning Rate = %.8f\n", learning_rate);
 		}
 	}
 
 	fclose (log);
 	
-	//fann_train_on_data (network, train_data, MAX_TRAIN_EPOCHS, EPOCHS_BETWEEN_REPORT, DESIRED_ERROR);
 	fann_destroy_train (train_data);
 }
 

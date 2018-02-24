@@ -81,8 +81,11 @@ fann_type **get_slices (double *data, unsigned num_slices, unsigned slice_width,
 	fann_type **slices = malloc (sizeof (fann_type*) * num_slices);
 	unsigned i;
 	for (i=0; i < num_slices; i++) {
-		slices[i] = flat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER);
-		//slices[i] = biflat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER, BIFLAT_DATA_OFFSET);
+		if (USE_BIFLAT) {
+			slices[i] = biflat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER, BIFLAT_DATA_OFFSET);
+		} else {
+			slices[i] = flat_data (data + (i*position_step*SPECTROGRAM_WINDOW), slice_width * SPECTROGRAM_WINDOW, NEURONS_INPUT_LAYER);
+		}
 	}
 	return slices;
 }

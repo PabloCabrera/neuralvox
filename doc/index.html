@@ -1,0 +1,194 @@
+<!DOCTYPE HTML>
+<head>
+	<title>Entrenamiento de red neuronal para reconocimiento de fonemas utilizando muestras sintetizadas</title>
+	<meta charset="utf-8" />
+	<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<h1>Entrenamiento de red neuronal para reconocimiento de fonemas utilizando muestras sintetizadas</h1>
+	<author>Pablo Cabrera Andrade</author>
+
+<h2>Resumen:</h2>
+
+	<p>El objetivo del proyecto es evaluar la factibilidad de utilizar software de síntesis de voz para entrenar una red neuronal capaz de reconocer fonemas.</p>
+
+	<p>Se utiliza una herramienta de síntesis de voz para generar muestras de voz sintetizadas para un conjunto de palabras y sílabas aisladas. Estas muestras tienen asociado el conjunto de fonemas contenidos en cada una de ellas. Cabe destacar que no se tiene en cuenta el orden ni la repetición de los fonemas, sólo su aparición. El conjunto de datos compuesto por los espectrogramas de estas muestras y sus fonemas asociados se utilizan para entrenar una red neuronal multicapa.</p>
+
+<h2>Motivación:</h2>
+	<p>El reconocimiento automático del habla es un problema cuyo tratamiento con algoritmos clásicos es prácticamente imposible, por lo que es necesario aplicar técnicas de inteligencia artificial, como las redes neuronales. Uno de los inconvenientes de este tipo de técnicas es que necesitan de un importante volumen de datos para su entrenamiento.</p>
+	<p>Lo que se propone en este experimento es generar estos datos mediante la utilización de herramientas de software.</p>
+
+<h2>Herramientas utilizadas:</h2>
+	<ul>
+		<li><a href="http://leenissen.dk/fann/wp/">FANN 2.2.0</a></li>
+		<li><a href="http://espeak.sourceforge.net/">eSpeak 1.48</a></li>
+		<li><a href="http://tcts.fpms.ac.be/synthesis/mbrola.html">MBROLA</a></li>
+		<li><a href="http://www.fftw.org/">FFTW</a></li>
+	</ul>
+
+<h2>Síntesis de muestras de voz</h2>
+	<p>Para generar las muestras de voz sintentizadas se utilizan las herramientas <a href="http://espeak.sourceforge.net/">espeak</a> y <a href="http://tcts.fpms.ac.be/synthesis/mbrola.html">mbrola</a>.</p>
+
+	<p>Actualmente se utiliza la configuración por defecto de pitch, velocidad y amplitud, y la voz "mb-es1".</p>
+	<p>En una etapa más avanzada del proyecto se realizarán pruebas con valores aleatorios para estos parámetros</p>
+	<p>Como conjunto de entrenamiento se generan 893 sílabas aisladas, así como 1297 palabras con una longitud máxima de 4 letras.</p>
+
+<h2>Generación de espectrogramas</h2>
+	<p>Para la generación de espectrogramas se utiliza la librería <a href="http://www.fftw.org/">FFTW</a>.</p>
+
+	<p>Los espectrogramas generados tienen un alto de 128 píxeles, y un ancho que depende del largo de la muestra.</p>
+	<p>Se han realizado experimentos con espectrogramas en escala de grises y color para determinar cuales son más adecuados. Se ha decidido utilizar espectrogramas en escala de grises, ya que los color necesitan más neuronas y conexiones, aumentando el tiempo necesario para el entrenamiento, y los resultados no son mejores.</p>
+	<figure>
+		<img src="img/spectrogram_example.png">
+		<figcaption>
+			Espectrograma de la palabra "tres". A la izquierda en escala de grises, y a la dercha en colores
+		</figcaption>
+	</figure>
+
+<h2>Red neuronal</h2>
+	<p>Para la red neuronal se utiliza la librería <a href="http://leenissen.dk/fann/wp/">FANN</a>.</p>
+
+<h3>Representación de los datos de Entrada</h3>
+	<p>El espectrograma no se presenta completo a la red neuronal, sino que se divide en bandas de frecuencia, y sobre cada banda se calcula una métrica.</p>
+	<p>Los experimentos se realizaron con 16 bandas de frecuencias</p>
+	<dl>
+		<dt>Media:</dt>
+		<dd>Media de los valores individuales de los píxeles. Con está métrica se obtiene hasta un 19.824 % de validación.</dd>
+
+		<dt>Máximo</dt>
+		<dd>Valor máximo de los píxeles de la banda de frecuencia. Con está métrica se obtiene hasta un 15.063 % de validación.</dd>
+
+		<dt>Aspereza</dt>
+		<dd>Se calcula como la suma de los valores absolutos de las diferencias entre cada píxel y su inmediatamente posterior. Para normalizar el valor obtenido, se divide entre el ancho del espectrograma y se aplica la función tangente hiperbólico. De esta forma se obtiene un valor entre 0 y 1. Con esta métrica se obtiene hasta un 22.870 % de validación.</dd>
+	</dl>
+
+	<ul>
+		<li>flat</li>
+		<li>cut</li>
+	</ul>
+
+<h3>Representación de los datos de Salida</h3>
+	<ul>
+		<li>Excluídos</li>
+		<li>Sinónimos</li>
+		<li>Vector de pesos</li>
+	</ul>
+
+
+<h2>Entrenamiento</h2>
+
+<h3>Profundidad de la red</h3>
+<p>Se realizaron pruebas con diferentes configuraciones de profundidad de la red (medida en número de capas ocultas) y cantidad de neuronas en cada capa.</p>
+<p>La pruebas consitieron en entrenar la red hasta que converja, y tomar medidas de porcentaje de validación error medio cuadrado, tiempo y cantidad de iteraciones necesarias. Se considera que la red ha convergido cuando el MSE (Error medio cuadrado) entre una epoch y 100 epochs anteriores es menor a un umbral de 0.0001</p>
+<p>Estas pruebas se han realizado con espectrogramas en escala de grises.</p>
+<table>
+	<tr>
+		<th>Neuronas por capa</th>
+		<th>Profundidad</th>
+		<th>Porcentaje de validación</th>
+		<th>Error cuadrado medio</th>
+		<th>Iteraciones</th>
+		<th>Tiempo</th>
+	</tr>
+	<tr>
+		<td>32</td>
+		<td>1</td>
+		<td>12.273 %</td>
+		<td>0.0407</td>
+		<td>2700</td>
+		<td>00:43</td>
+	</tr>
+	<tr>
+		<td>32</td>
+		<td>2</td>
+		<td>12.935 %</td>
+		<td>0.0290</td>
+		<td>2300</td>
+		<td>01:01</td>
+	</tr>
+	<tr>
+		<td>32</td>
+		<td>3</td>
+		<td>14.493 %</td>
+		<td>0.0237</td>
+		<td>2800</td>
+		<td>01:42</td>
+	</tr>
+	<tr>
+		<td>64</td>
+		<td>1</td>
+		<td>14.286 %</td>
+		<td>0.0323</td>
+		<td>3100</td>
+		<td>01:20</td>
+	</tr>
+	<tr>
+		<td>64</td>
+		<td>2</td>
+		<td>19.283 %</td>
+		<td>0.0150</td>
+		<td>1900</td>
+		<td>01:52</td>
+	</tr>
+	<tr>
+		<td>64</td>
+		<td>3</td>
+		<td>18.894 %</td>
+		<td>0.0100</td>
+		<td>2300</td>
+		<td>03:32</td>
+	</tr>
+	<tr>
+		<td>128</td>
+		<td>1</td>
+		<td>15.421 %</td>
+		<td>0.0240</td>
+		<td>3500</td>
+		<td>02:38</td>
+	</tr>
+	<tr>
+		<td>128</td>
+		<td>2</td>
+		<td>21.525 %</td>
+		<td>0.0071</td>
+		<td>2200</td>
+		<td>05:58</td>
+	</tr>
+	<tr>
+		<td>128</td>
+		<td>3</td>
+		<td>20.091 %</td>
+		<td>0.0035</td>
+		<td>1800</td>
+		<td>08:20</td>
+	</tr>
+
+	<p>El mejor resultado obtenido, haciendo un balance entre costo y resultados es la configuración de 2 capas ocultas con 64 neuronas cada una.</p>
+</table>
+
+<h2>Learning Rate</h2>
+	<p>Haciendo un gráfico de la función de error con un learning rate constante, puede verse que el error se hace más errático a medida que aumentan las epochs.</p>
+	<img src="img/training01.png" alt="">
+
+	<p>Reduciendo el learning rate en un 10% cada 300 epochs el resultado es mucho mejor.</p>
+	<p>Se puede ver que la variación del error va disminuyendo progresivamete. Se ven escalones en las epochs donde cambia el learning rate.</p>
+	<img src="img/training02.png" alt="">
+
+	</p>Por último, disminuyendo el learning rate después cada epoch en un 0.1%, se puede observar que la curva del error es mucho más suave, y la variación es acotada.</p>
+
+	<img src="img/training02.png" alt="">
+
+<h2>Validacion</h2>
+
+	<p>Para hacer validación se separa el 10% de las muestras generadas.</p>
+
+<h2>Visualización de resultados</h2>
+	<ul>
+		<li>Interfaz web</li>
+	</ul>
+
+<h2>Conclusión</h2>
+	<p></p>
+
+</body>

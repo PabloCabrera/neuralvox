@@ -77,18 +77,18 @@ fann_type *flat_data_color (double *data, long data_length, unsigned out_length)
 }
 
 fann_type *flat_data_grayscale (double *data, long data_length, unsigned out_length) {
-	unsigned num_freqs = out_length;
+	unsigned num_freqs = out_length/2;
 	fann_type *flatted_data = malloc (out_length * sizeof (fann_type));
 	fann_type *sharp = get_sharp_histogram (data, data_length, num_freqs);
-	//fann_type *means = get_means_histogram (data, data_length, num_freqs);
+	fann_type *means = get_means_histogram (data, data_length, num_freqs);
 	//fann_type *max = get_max_histogram (data, data_length, num_freqs);
 
 	memcpy (flatted_data, sharp, num_freqs * sizeof (fann_type));
-	//memcpy (flatted_data, means, num_freqs * sizeof (fann_type));
+	memcpy (flatted_data + num_freqs, means, num_freqs * sizeof (fann_type));
 	//memcpy (flatted_data, max, num_freqs * sizeof (fann_type));
 
 	free (sharp);
-	//free (means);
+	free (means);
 	//free (max);
 	return flatted_data;
 }

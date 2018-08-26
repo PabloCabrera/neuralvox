@@ -51,7 +51,15 @@
 
 <h3>Representación de los datos de Entrada</h3>
 	<p>El espectrograma no se presenta completo a la red neuronal, sino que se divide en bandas de frecuencia, y sobre cada banda se calcula una métrica.</p>
-	<p>Los experimentos se realizaron con 16 bandas de frecuencias</p>
+	<figure>
+		<img src="img/spectrogram_freq_bands.png">
+		<figcaption>
+			Ejemplo de espectrograma dividido en 8 bandas de frecuencias.
+		</figcaption>
+	</figure>
+
+
+	<p>Los experimentos se realizaron con 16 bandas de frecuencias. Se compararon las 3 métricas detalladas a continuación para represaentar cada banda de frecuencia:</p>
 	<dl>
 		<dt>Media:</dt>
 		<dd>Media de los valores individuales de los píxeles. Con está métrica se obtiene hasta un 19.824 % de validación.</dd>
@@ -63,17 +71,24 @@
 		<dd>Se calcula como la suma de los valores absolutos de las diferencias entre cada píxel y su inmediatamente posterior. Para normalizar el valor obtenido, se divide entre el ancho del espectrograma y se aplica la función tangente hiperbólico. De esta forma se obtiene un valor entre 0 y 1. Con esta métrica se obtiene hasta un 22.870 % de validación.</dd>
 	</dl>
 
-	<ul>
-		<li>flat</li>
-		<li>cut</li>
-	</ul>
+	<p>Utilizando en conjunto Aspereza y Media se obtiene una validación de 25.641 %.</p>
+
+	<h4>Bisección en el tiempo</h4>
+	<p>Para mejorar el nivel de detalle, se ha hecho el experimento de biseccionar cada banda de frecuencia en el tiempo, para obtener más detalle. Esto duplica la cantidad de neuronas de entrada.</p>
+	<p>Ya que en la salida de la red no se toma en cuenta el orden de los fonemas, las dos mitades se reordenan de ser necesario para que la que tenga más peso en las bajas frecuencias aparezca primero.<p>
+	<figure>
+		<img src="img/spectrogram_freq_bands_2.png">
+		<figcaption>
+			Ejemplo de espectrograma dividido en 8 bandas de frecuencias, y biseccionado en el tiempo.
+		</figcaption>
+	</figure>
+
+	<p>Los resultados del experimento muestran que aplicar esta bisección no mejora el porcentaje de validación, de hecho disminuye entre un 2% y 3%.</p>
 
 <h3>Representación de los datos de Salida</h3>
-	<ul>
-		<li>Excluídos</li>
-		<li>Sinónimos</li>
-		<li>Vector de pesos</li>
-	</ul>
+
+	<p>En la capa de salida de la red hay una neurona para cada fonema que se busca reconocer. Un valor cercano a 0 indica la ausencia del fonema, y un valor cercano a 1 su prescencia.</p>
+
 
 
 <h2>Entrenamiento</h2>
@@ -180,15 +195,15 @@
 	<img src="img/training02.png" alt="">
 
 <h2>Validacion</h2>
-
-	<p>Para hacer validación se separa el 10% de las muestras generadas.</p>
+	<p>Para hacer validación se separa el 10% de las muestras generadas. Estas muestras no son utilizadas en el conjunto de entrenamiento.</p>
 
 <h2>Visualización de resultados</h2>
-	<ul>
-		<li>Interfaz web</li>
-	</ul>
+	<p>Se realizaron pruebas sobre frases completas, generadas con el mismo software que las muestras de entrenamiento.</p>
+	<p>Para visualizar los resultados, se presenta una interfaz web en la que se presenta el espectrograma, y los fonemas detectados en cada segmento del mismo.</p>
+	<a href="../web/index.html"><img src="img/web_interface.png"></a>
+	<a href="../web/index.html">Interfaz web</a>
 
-<h2>Conclusión</h2>
-	<p></p>
+<h2>Próximos pasos</h2>
+	<p>Como siguiente paso se estudiará cómo se comporta con voces humanas reales, y con diferentes configuraciones de tono, amplitud y velocidad para las voces generadas por el mismo software, y por otros software de síntesis de voz.</p>
 
 </body>

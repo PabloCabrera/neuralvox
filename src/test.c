@@ -4,9 +4,9 @@
 #include <string.h>
 #include "common.h"
 
-#define TESTING_THRESHOLD 0.9
-#define SLICE_WIDTH (60*NUM_CHANNELS)
-#define SLICE_STEP (60*NUM_CHANNELS)
+#define TESTING_THRESHOLD 0.95
+#define SLICE_WIDTH (40*NUM_CHANNELS)
+#define SLICE_STEP (40*NUM_CHANNELS)
 #define NUM_EXAMPLES 5
 #define BIFLAT_DATA_OFFSET 0.2
 

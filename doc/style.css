@@ -7,3 +7,16 @@ body {
 	margin-left: auto;
 	margin-right: auto;
 }
+
+dt {
+	font-weight: bold;
+}
+
+h2 {
+	margin-top: 60px;
+}
+
+h3 {
+	margin-top: 40px;
+}
+	

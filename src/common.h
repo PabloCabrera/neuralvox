@@ -1,4 +1,4 @@
-#define PHONEME "abdefgijklmnopRr*stTuwx"
+#define PHONEME "abdefgHiJklLmnoprstTuwYx"
 #define SPECTROGRAM_COLOR 0
 #define NUM_CHANNELS (1+2*(SPECTROGRAM_COLOR))
 #define SPECTROGRAM_WINDOW 128

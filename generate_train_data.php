@@ -20,6 +20,8 @@ function main () {
 	if ($GENERATE_TESTING) {
 		generate_testing_data ();
 	}
+
+	clean_temp_files ();
 }
 
 function get_words () {
@@ -154,5 +156,8 @@ function generate_wav_festival ($text, $wav_filename) {
 	return $pronunctiation;
 }
 
+function clean_temp_files () {
+	@unlink ("wav_list.txt");
+}
 
 main ();

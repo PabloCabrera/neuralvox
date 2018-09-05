@@ -282,7 +282,6 @@ bool test_item (struct fann *network, struct training_item item) {
 	return ok;
 }
 
-
 void show_results (struct fann *network, struct training_item item) {
 	fann_type *result = fann_run (network, item.data_flatted);
 	char *result_string = result_vector_to_string (result, TRAINING_THRESHOLD);

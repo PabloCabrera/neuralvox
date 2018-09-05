@@ -4,9 +4,9 @@
 #include <string.h>
 #include "common.h"
 
-#define TESTING_THRESHOLD 0.95
-#define SLICE_WIDTH (40*NUM_CHANNELS)
-#define SLICE_STEP (40*NUM_CHANNELS)
+#define TESTING_THRESHOLD 0.8
+#define SLICE_WIDTH (16*NUM_CHANNELS)
+#define SLICE_STEP (16*NUM_CHANNELS)
 #define NUM_EXAMPLES 5
 #define BIFLAT_DATA_OFFSET 0.2
 
@@ -45,7 +45,7 @@ int main (int argc, char *args[]) {
 
 	char *filename = malloc (strlen ("raw/frase_xxxx.raw$"));
 	for (i=1; i <= NUM_EXAMPLES; i++) {
-		sprintf (filename, "raw/frase_%d.raw", i);
+		sprintf (filename, "testing/frase_%d.raw", i);
 		test_file (network, filename, jsfile);
 		if (i < NUM_EXAMPLES) {
 			fprintf (jsfile, ",\n");
@@ -96,7 +96,7 @@ void generate_js_info (char *raw_filename, long data_length, unsigned num_slices
 	struct spectrogram_info *info = malloc (sizeof (struct spectrogram_info));
 	info-> image_filename = png_filename;
 	info-> wav_filename = wav_filename;
-	info-> spectrogram_width = ((data_length+SPECTROGRAM_OFFSET_START+SPECTROGRAM_OFFSET_END) / SPECTROGRAM_WINDOW);
+	info-> spectrogram_width = ((data_length) / SPECTROGRAM_WINDOW);
 	info-> spectrogram_height = SPECTROGRAM_WINDOW;
 	info-> num_slices = num_slices;
 	info-> slices = malloc (num_slices * sizeof (struct slice_info));
@@ -117,21 +117,30 @@ void generate_js_info (char *raw_filename, long data_length, unsigned num_slices
 }
 
 char *get_png_filename (char *raw_filename) {
-	unsigned filename_length = strlen (raw_filename);
-	char *png_filename = malloc (filename_length +1);
-	strcpy (png_filename, "png/");
-	strcat (png_filename, raw_filename + 4);
-	strcpy (png_filename + filename_length -4, ".png");
+	char *dirname = "png";
+	char *last_slash = strrchr (raw_filename, '/');
+	char *basename = (last_slash == NULL)? raw_filename: last_slash+1;
+	char *png_filename = malloc (strlen (dirname) + strlen (basename) + 2);
+	sprintf (png_filename, "%s/%s", dirname, basename);
+	char *extension = strrchr (png_filename, '.');
+	if (extension != NULL) {
+		strcpy (extension, ".png");
+	}
 	return png_filename;
 }
 
 char *get_wav_filename (char *raw_filename) {
+	char *dirname = "wav";
 	unsigned filename_length = strlen (raw_filename);
-	char *png_filename = malloc (filename_length +1);
-	strcpy (png_filename, "wav/");
-	strcat (png_filename, raw_filename + 4);
-	strcpy (png_filename + filename_length -4, ".wav");
-	return png_filename;
+	char *last_slash = strrchr (raw_filename, '/');
+	char *basename = (last_slash == NULL)? raw_filename: last_slash+1;
+	char *wav_filename = malloc (strlen (dirname) + strlen (basename) + 2);
+	sprintf (wav_filename, "%s/%s", dirname, basename);
+	char *extension = strrchr (wav_filename, '.');
+	if (extension != NULL) {
+		strcpy (extension, ".wav");
+	}
+	return wav_filename;
 }
 
 

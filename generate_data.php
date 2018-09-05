@@ -6,10 +6,11 @@ function main () {
 	//clean_dirs ();
 	create_dirs ();
 	$words = $GENERATE_WORDS? get_words (): [];
-	$syllables = $GENERATE_SYLLABLES? get_syllables (): [];
-	$all_words = array_merge ($words, $syllables);
+	//$syllables = $GENERATE_SYLLABLES? get_syllables (): [];
+	//$all_words = array_merge ($words, $syllables);
 
-	generate_training_data ($all_words);
+	//generate_training_data ($all_words);
+	generate_training_data ($words);
 	if ($GENERATE_TESTING) {
 		generate_testing_data ();
 	}
@@ -56,14 +57,15 @@ function generate_training_data ($words) {
 		$retval = -1;
 		$found = [];
 		$wav_filename = "wav/$word.wav";
+		//echo "$word\n";
 		$pronunctiation = generate_wav ($word, $wav_filename);
 		
 		fwrite ($pronunctiation_file, "$word|$pronunctiation\n");
 		fwrite ($wavlist_file, "$wav_filename\n");
-		if ($count++ % 1000 == 0) {
+		if ($count++ % 100 == 0) {
 			fclose ($wavlist_file);
 			fclose ($pronunctiation_file);
-			exec ("$SPECTVOX_COMMAND wav_list.txt");
+			exec ("$SPECTVOX_COMMAND -p wav_list.txt");
 			$pronunctiation_file = fopen ("pronunctiation.txt", "a");
 			$wavlist_file = fopen ("wav_list.txt", "w");
 			foreach (glob ("wav/*.png") as $filename) {

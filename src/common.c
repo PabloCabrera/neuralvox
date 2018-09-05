@@ -25,9 +25,6 @@ long load_raw_file_data (char *filename, double **buffer) {
 	double *tmp_data = malloc (sizeof (double) * buffer_size);
 	memset (tmp_data, '\0', buffer_size * sizeof (double));
 
-	/* Skip offset pixels */
-	fseek (file, SPECTROGRAM_OFFSET_START * sizeof (double), SEEK_SET);
-
 	while (!stop) {
 
 		long readed = fread (tmp_data + total_readed, sizeof (double), SPECTROGRAM_WINDOW, file);
@@ -43,7 +40,7 @@ long load_raw_file_data (char *filename, double **buffer) {
 	
 	fclose (file);
 	*buffer = tmp_data;
-	return (total_readed) - (SPECTROGRAM_OFFSET_END);
+	return (total_readed);
 }
 
 
